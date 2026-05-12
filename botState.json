@@ -1,6 +1,6 @@
 {
   "globalPauseUntil": 0,
-  "consecutiveLosses": 0,
+  "consecutiveLosses": 1,
   "tokenStats": {
     "DTxAL7J6vvDagsFGMgKJuZHPb3qB69W55i6umMkdpump": {
       "slCount": 0,
@@ -28,8 +28,13 @@
       "blacklisted": false
     },
     "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump": {
+      "slCount": 1,
+      "cooldownUntil": 1778572223976,
+      "blacklisted": false
+    },
+    "FSJjkoszKtrfacrv13oG8Mo5xVzWf2TewFUfqMpGpump": {
       "slCount": 0,
-      "cooldownUntil": 1778567186755,
+      "cooldownUntil": 1778571519416,
       "blacklisted": false
     },
     "85uSwFo4mVpa5GzeXQNLkdTPnndE8oK5zxwsjsEjpump": {
