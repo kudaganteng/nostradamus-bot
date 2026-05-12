@@ -121,7 +121,9 @@ class EngineService {
         console.log(chalk.cyan(`\n[Observer] 🕵️ Menunda Entry. Mengawasi ${token.baseToken.symbol} selama ${obs.durationSeconds} detik...`));
 
         let prices = [];
-        const iterations = Math.floor(obs.durationSeconds / obs.intervalSeconds);
+        // Ubah interval menjadi 1 detik untuk data lebih real-time selama observasi
+        const realTimeInterval = 1; 
+        const iterations = Math.floor(obs.durationSeconds / realTimeInterval);
 
         for (let i = 0; i < iterations; i++) {
             const currentPrice = await this.getCurrentPrice(token.pairAddress, true);
@@ -130,7 +132,7 @@ class EngineService {
             // Tampilkan indikator loading di terminal
             process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length}/${iterations} detik...\r`));
 
-            await new Promise(resolve => setTimeout(resolve, obs.intervalSeconds * 1000));
+            await new Promise(resolve => setTimeout(resolve, realTimeInterval * 1000));
         }
 
         if (prices.length < 3) {

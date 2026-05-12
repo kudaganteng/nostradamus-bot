@@ -27,7 +27,7 @@
     "minLiquidity": 2000,
     "maxLiquidity": 500000,
     "minAgeMinutes": 1,
-    "maxAgeMinutes": 90,
+    "maxAgeMinutes": 1440,
     "minVolume5m": 300,
     "volumeAccelRatio": 0.8, 
     "buyerAccelRatio": 0.8, 
