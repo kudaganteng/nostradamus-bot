@@ -128,38 +128,39 @@ class ScannerService {
         const bsRatio = buys5m / sells5m;
         if (bsRatio < f.minBuySellRatio) return false;
 
-        // 4. VOLUME & BUYER ACCELERATION
+        // 4. VOLUME & BUYER ACCELERATION (LOGIKA DIPERBAIKI)
         let volAccel = 1.0;
         let buyerAccel = 1.0;
 
-        // Hanya hitung akselerasi jika koin sudah berumur lebih dari 5 menit
-        if (pairAgeMinutes > 5) {
+        // Hanya hitung akselerasi jika koin sudah berumur lebih dari 15 menit
+        // Koin <15 menit masih dalam fase discovery, tidak bisa dihitung rata-rata
+        if (pairAgeMinutes > 15) {
             const cycles = pairAgeMinutes / 5;
             const avgVolPer5m = vol1h / cycles;
             volAccel = avgVolPer5m > 0 ? (vol5m / avgVolPer5m) : 0;
 
             const avgBuysPer5m = txns1h.buys / cycles;
             buyerAccel = avgBuysPer5m > 0 ? (buys5m / avgBuysPer5m) : 0;
+            
+            // Cek akselerasi hanya untuk koin mature (>15 menit)
+            if (volAccel < f.volumeAccelRatio) return false;
+            if (buyerAccel < f.buyerAccelRatio) return false;
         } else {
-            // Untuk koin di bawah 5 menit, otomatis lolos tes akselerasi 
-            // karena sedang dalam fase penemuan harga (price discovery)
-            volAccel = f.volumeAccelRatio + 0.1;
-            buyerAccel = f.buyerAccelRatio + 0.1;
+            // Untuk koin di bawah 15 menit, SKIP tes akselerasi
+            // Fokus pada absolute volume dan momentum saat ini saja
+            volAccel = 1.5; // Nilai aman yang pasti lolos filter
+            buyerAccel = 1.5;
         }
 
-        if (volAccel < f.volumeAccelRatio) return false;
-        if (buyerAccel < f.buyerAccelRatio) return false;
-
-        // 5. ANTI-FOMO / VERTICAL PUMP
+        // 5. ANTI-FOMO / VERTICAL PUMP (Longgarkan filter)
         const change1m = pair.priceChange?.m1 || 0;
         const change5m = pair.priceChange?.m5 || 0;
 
-        if (change1m > f.maxPriceChange1m || change5m > f.maxPriceChange5m) return false;
+        // Longgarkan max price change agar tidak menolak token yang sedang pump sehat
+        if (change1m > (f.maxPriceChange1m * 2) || change5m > (f.maxPriceChange5m * 1.5)) return false;
 
-        // Visualisasi Terminal
-        process.stdout.write(
-            chalk.green(`\n[GOOD ENTRY] ${pair.baseToken.symbol} | Umur: ${pairAgeMinutes.toFixed(1)}m | Liq: $${Math.round(liq)} | VolAccel: ${volAccel.toFixed(1)}x\n`)
-        );
+        // DEBUG LOG - Hapus setelah bot stabil
+        console.log(chalk.green(`\n[GOOD ENTRY] ${pair.baseToken.symbol} | Umur: ${pairAgeMinutes.toFixed(1)}m | Liq: $${Math.round(liq)} | Vol5m: $${vol5m} | Buys5m: ${buys5m} | VolAccel: ${volAccel.toFixed(1)}x`));
 
         return true;
     }
