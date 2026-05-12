@@ -27,6 +27,7 @@ class ScannerService {
             }
 
             const uniqueAddresses = await this.collectUniqueAddresses();
+            console.log(chalk.gray(`[${new Date().toLocaleTimeString()}] Mengecek ${uniqueAddresses.size} koin dari 6 endpoint...`))
             if (uniqueAddresses.size === 0) {
                 process.stdout.write(chalk.red(`\r[Scanner] API lambat/kosong. Mengulang...       `));
                 return null;

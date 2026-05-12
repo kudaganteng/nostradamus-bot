@@ -1,4 +1,7 @@
 {
+  "rpc": {
+    "alchemyUrl": "https://solana-mainnet.g.alchemy.com/v2/O-YUgNdFZmxSp_sLS24b8"
+  },
   "trading": {
     "paperBalance": 1.0,
     "positionSize": 0.2,
@@ -8,9 +11,9 @@
     "trailingStopPercent": 3
   },
   "observation": {
-    "durationSeconds": 45,
+    "durationSeconds": 30,
     "intervalSeconds": 5,
-    "maxDumpPercent": 10
+    "maxDumpPercent": 12
   },
   "riskManagement": {
     "slCooldown1xMinutes": 15,
@@ -20,16 +23,16 @@
     "globalPauseMinutes": 30
   },
   "filters": {
-    "minLiquidity": 8000,
-    "maxLiquidity": 150000,
-    "minAgeMinutes": 3,
-    "maxAgeMinutes": 30,
-    "minVolume5m": 2000,
-    "volumeAccelRatio": 1.5, 
-    "buyerAccelRatio": 1.5, 
-    "minBuySellRatio": 1.2,
-    "minBuys5m": 50,
-    "maxPriceChange5m": 80,
-    "maxPriceChange1m": 25
+    "minLiquidity": 5000,
+    "maxLiquidity": 300000,
+    "minAgeMinutes": 2,
+    "maxAgeMinutes": 60,
+    "minVolume5m": 1000,
+    "volumeAccelRatio": 1.2, 
+    "buyerAccelRatio": 1.2, 
+    "minBuySellRatio": 1.1,
+    "minBuys5m": 30,
+    "maxPriceChange5m": 100,
+    "maxPriceChange1m": 30
   }
 }
