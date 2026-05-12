@@ -116,6 +116,11 @@
       "slCount": 1,
       "cooldownUntil": 1778593683838,
       "blacklisted": false
+    },
+    "6ZM2sFrxQA54yWLe5BXo6kSSdW9trF64hHmfsSFkpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778593879152,
+      "blacklisted": false
     }
   }
 }

@@ -323,5 +323,18 @@
     "pnl": 23.81338742393509,
     "reason": "🚀 Moon Target Reached",
     "closedAt": "2026-05-12T13:34:51.834Z"
+  },
+  {
+    "symbol": "CZM",
+    "address": "6ZM2sFrxQA54yWLe5BXo6kSSdW9trF64hHmfsSFkpump",
+    "pairAddress": "7Jzr7N56ysbdG92dYbZaGNcPb4B7emxdzxianAPcA4oj",
+    "entryPrice": 0.00002505,
+    "maxPrice": 0.000031,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-12T13:46:14.990Z",
+    "exitPrice": 0.000031,
+    "pnl": 23.752495009980052,
+    "reason": "🚀 Moon Target Reached",
+    "closedAt": "2026-05-12T13:46:19.149Z"
   }
 ]

@@ -1,5 +1,54 @@
 [
   {
+    "timestamp": "2026-05-12T13:46:46.394Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PHOENIX"
+  },
+  {
+    "timestamp": "2026-05-12T13:46:46.392Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PHOENIX",
+    "address": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump"
+  },
+  {
+    "timestamp": "2026-05-12T13:45:56.530Z",
+    "action": "OBSERVATION_START",
+    "symbol": "CZM"
+  },
+  {
+    "timestamp": "2026-05-12T13:45:56.527Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "CZM",
+    "address": "6ZM2sFrxQA54yWLe5BXo6kSSdW9trF64hHmfsSFkpump"
+  },
+  {
+    "timestamp": "2026-05-12T13:45:32.994Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T13:39:08.412Z",
+    "action": "WASH_TRADING_CHECK_ERROR",
+    "token": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump",
+    "error": "Request failed with status code 404"
+  },
+  {
+    "timestamp": "2026-05-12T13:38:48.777Z",
+    "action": "OBSERVATION_START",
+    "symbol": "RKC"
+  },
+  {
+    "timestamp": "2026-05-12T13:38:48.774Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "RKC",
+    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
+  },
+  {
+    "timestamp": "2026-05-12T13:38:43.233Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
     "timestamp": "2026-05-12T13:35:06.713Z",
     "action": "OBSERVATION_START",
     "symbol": "RKC"
