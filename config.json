@@ -1,0 +1,35 @@
+{
+  "trading": {
+    "paperBalance": 1.0,
+    "positionSize": 0.2,
+    "targetProfitPercent": 10,
+    "stopLossPercent": 5,
+    "trailingStartPercent": 7,
+    "trailingStopPercent": 3
+  },
+  "observation": {
+    "durationSeconds": 45,
+    "intervalSeconds": 5,
+    "maxDumpPercent": 10
+  },
+  "riskManagement": {
+    "slCooldown1xMinutes": 15,
+    "slCooldown2xMinutes": 60,
+    "rugpullThresholdPercent": -15,
+    "maxConsecutiveLosses": 3,
+    "globalPauseMinutes": 30
+  },
+  "filters": {
+    "minLiquidity": 8000,
+    "maxLiquidity": 150000,
+    "minAgeMinutes": 3,
+    "maxAgeMinutes": 30,
+    "minVolume5m": 2000,
+    "volumeAccelRatio": 1.5, 
+    "buyerAccelRatio": 1.5, 
+    "minBuySellRatio": 1.2,
+    "minBuys5m": 50,
+    "maxPriceChange5m": 80,
+    "maxPriceChange1m": 25
+  }
+}

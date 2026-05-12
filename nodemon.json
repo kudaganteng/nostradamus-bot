@@ -1,0 +1,11 @@
+{
+  "ignore": [
+    "paperTrades.json",
+    "portfolio.json",
+    "botState.json",
+    "botActivity.json",
+    "node_modules/*",
+    "src/utils/storage.js"
+  ],
+  "delay": "1000"
+}
