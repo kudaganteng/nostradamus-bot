@@ -33,49 +33,40 @@ class EngineService {
             await new Promise(resolve => setTimeout(resolve, obs.intervalSeconds * 1000));
         }
 
-        if (prices.length < 5) {
+        if (prices.length < 3) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.`));
             return false;
         }
 
-        // --- ANALISIS STRUKTUR PASAR (MINI-CHART) ---
-        // Kita bagi 45 detik menjadi 3 fase: Awal (Resistance), Tengah (Pullback/Low), Akhir (Breakout)
-        const third = Math.floor(prices.length / 3);
-        const phase1 = prices.slice(0, third);
-        const phase2 = prices.slice(third, third * 2);
-        const phase3 = prices.slice(third * 2);
+        // --- ANALISIS STRUKTUR PASAR (SIMPLIFIED) ---
+        const startPrice = prices[0];
+        const endPrice = prices[prices.length - 1];
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
 
-        const initialResistance = Math.max(...phase1);
-        const localLow = Math.min(...phase1, ...phase2); // Titik terendah selama fase 1 & 2
-        const finalPrice = prices[prices.length - 1];
-
-        // 1. Syarat Pullback: Harga harus sempat turun dari resistance awal (Syarat Reversal)
-        if (localLow >= initialResistance) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Koin naik lurus (Vertical Pump). Terlalu berisiko beli pucuk.`));
+        // 1. Syarat Trend: Harga akhir harus lebih tinggi dari harga awal (uptrend dasar)
+        const trendPercent = ((endPrice - startPrice) / startPrice) * 100;
+        if (trendPercent <= 0) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Trend negatif (${trendPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // 2. Syarat Dump Tolerance: Turunnya tidak boleh seperti rugpull (> 10%)
-        const dumpPercent = ((initialResistance - localLow) / initialResistance) * 100;
-        if (dumpPercent > obs.maxDumpPercent) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Drop terlalu dalam (${dumpPercent.toFixed(2)}%). Struktur rusak.`));
+        // 2. Syarat Stabilitas: Tidak ada dump ekstrem (> maxDumpPercent)
+        const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
+        if (maxDropPercent > obs.maxDumpPercent) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas terlalu tinggi (${maxDropPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // 3. Syarat Breakout & Reclaim: Harga akhir harus menembus resistance awal
-        if (finalPrice <= initialResistance) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Gagal Breakout. Res: $${initialResistance.toFixed(6)} | Final: $${finalPrice.toFixed(6)}`));
+        // 3. Syarat Entry: Harga tidak sedang di pucuk (allow some pullback)
+        const fromPeakPercent = ((maxPrice - endPrice) / maxPrice) * 100;
+        if (fromPeakPercent > 5) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Harga turun terlalu jauh dari puncak (${fromPeakPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // 4. Syarat Higher Low: Titik terendah (Low) tidak terjadi di fase akhir
-        const minPricePhase3 = Math.min(...phase3);
-        if (minPricePhase3 < localLow) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Membentuk Lower Low. Sedang downtrend.`));
-            return false;
-        }
-
-        console.log(chalk.green.bold(`\n[Observer] ✅ TERKONFIRMASI! Reversal + Breakout terdeteksi. Mengeksekusi BUY!`));
+        console.log(chalk.green.bold(`\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!`));
+        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
         return true;
     }
 
