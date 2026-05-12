@@ -5,14 +5,50 @@ const telegram = require('./telegram');
 const storage = require('../utils/storage');
 const scanner = require('./scanner');
 const activityLogger = require('../utils/activityLogger');
+const { Connection, PublicKey } = require('@solana/web3.js');
 
 class EngineService {
     constructor() {
         // Inisialisasi storage saat engine dinyalakan
         storage.init();
+        this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
         this.currentPosition = null;
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
+    }
+
+    async getCurrentPrice(pairAddress) {
+        try {
+            // Kita ambil informasi akun pool dari blockchain
+            const poolPublicKey = new PublicKey(pairAddress);
+            const accountInfo = await this.connection.getParsedAccountInfo(poolPublicKey);
+
+            // Catatan: Untuk koin yang baru launch (Raydium), 
+            // kita biasanya membutuhkan alamat vault SOL dan vault Token.
+            // Sebagai alternatif yang lebih stabil untuk pemula, 
+            // kita tetap gunakan DexScreener API tapi divalidasi dengan data RPC Alchemy.
+
+            const resp = await axios.get(`https://api.dexscreener.com/latest/dex/pairs/solana/${pairAddress}`, { timeout: 2000 });
+
+            if (resp.data && resp.data.pair) {
+                const price = parseFloat(resp.data.pair.priceUsd);
+
+                // Verifikasi keberadaan token di blockchain via Alchemy
+                // Jika koin sudah di-rugpull (akun dihapus), RPC akan mengembalikan null
+                const tokenAccount = await this.connection.getAccountInfo(new PublicKey(resp.data.pair.baseToken.address));
+
+                if (!tokenAccount) {
+                    activityLogger.log("RPC_WARNING", { message: "Token account not found on-chain. Possible Rugpull." });
+                    return null;
+                }
+
+                return price;
+            }
+            return null;
+        } catch (error) {
+            // console.error("RPC/API Error:", error.message);
+            return null;
+        }
     }
 
     async observeAndConfirm(token) {
