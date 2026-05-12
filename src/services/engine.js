@@ -6,7 +6,6 @@ const storage = require('../utils/storage');
 const scanner = require('./scanner');
 const activityLogger = require('../utils/activityLogger');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const WebSocket = require('ws');
 
 class EngineService {
     constructor() {
@@ -15,9 +14,7 @@ class EngineService {
         this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
         this.currentPosition = null;
         this.checkInterval = null;
-        this.wsSubscription = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
-        this.wsUrl = config.rpc.alchemyUrl.replace('https://', 'wss://').replace('/v2/', '/v2/');
     }
 
     async getCurrentPrice(pairAddress, validateOnChain = false) {
@@ -37,6 +34,10 @@ class EngineService {
 
             return price;
         } catch (error) {
+            if (error.response && error.response.status === 429) {
+                console.log(chalk.yellow.bold('\\n[⚠️ RATE LIMIT] Error 429: Terlalu banyak request. Memperlambat refresh...'));
+                activityLogger.log('RATE_LIMIT', { message: 'DexScreener API returned 429 - Rate limit exceeded' });
+            }
             return null;
         }
     }
@@ -135,106 +136,11 @@ class EngineService {
     }
 
     /**
-     * Loop Monitoring Harga menggunakan WebSocket (Real-time)
+     * Loop Monitoring Harga menggunakan Polling (1 detik)
      */
     startMonitoring() {
-        console.log(chalk.blue(`Memulai monitoring real-time via WebSocket untuk ${this.currentPosition.symbol}...`));
-
-        // Buat koneksi WebSocket ke Alchemy
-        const ws = new WebSocket(this.wsUrl);
-        this.wsSubscription = ws;
-
-        ws.on('open', () => {
-            console.log(chalk.green('[WebSocket] Terhubung ke Alchemy RPC'));
-            
-            // Subscribe ke account changes untuk token yang sedang di-trade
-            const tokenAddress = this.currentPosition.address;
-            const subscribeMessage = {
-                jsonrpc: "2.0",
-                id: 1,
-                method: "accountSubscribe",
-                params: [
-                    tokenAddress,
-                    { encoding: "jsonParsed" },
-                    { commitment: "confirmed" }
-                ]
-            };
-            
-            ws.send(JSON.stringify(subscribeMessage));
-        });
-
-        ws.on('message', (data) => {
-            try {
-                const message = JSON.parse(data.toString());
-                
-                // Handle subscription response
-                if (message.result !== undefined && message.id === 1) {
-                    console.log(chalk.cyan(`[WebSocket] Subscribed dengan ID: ${message.result}`));
-                    return;
-                }
-                
-                // Handle notification (price update)
-                if (message.method === 'accountNotification') {
-                    this.handlePriceUpdate();
-                }
-            } catch (error) {
-                console.error(chalk.red('[WebSocket] Error parsing message:'), error.message);
-            }
-        });
-
-        ws.on('error', (error) => {
-            console.error(chalk.red('[WebSocket] Error:'), error.message);
-            this.fallbackToPolling();
-        });
-
-        ws.on('close', () => {
-            console.log(chalk.yellow('[WebSocket] Koneksi tertutup'));
-            if (this.currentPosition) {
-                this.fallbackToPolling();
-            }
-        });
-
-        // Fallback ke polling jika WebSocket tidak connect dalam 5 detik
-        setTimeout(() => {
-            if (ws.readyState !== WebSocket.OPEN && this.currentPosition) {
-                console.log(chalk.yellow('[WebSocket] Timeout, fallback ke polling'));
-                this.fallbackToPolling();
-            }
-        }, 5000);
-    }
-
-    /**
-     * Handle price update dari WebSocket
-     */
-    async handlePriceUpdate() {
-        if (!this.currentPosition) return;
-
-        try {
-            const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress);
-
-            if (!currentPrice) {
-                console.log(chalk.red("[WebSocket] Gagal mendapatkan harga terbaru, mencoba lagi..."));
-                return;
-            }
-
-            // Kalkulasi PNL saat ini
-            const pnl = ((currentPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-
-            // Update harga tertinggi (untuk Trailing Stop)
-            if (currentPrice > this.currentPosition.maxPrice) {
-                this.currentPosition.maxPrice = currentPrice;
-            }
-
-            // Kalkulasi PNL dari titik tertinggi (Peak PNL)
-            const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-
-            process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}%    `));
-
-            this.checkExitConditions(currentPrice, pnl, maxPnl);
-
-        } catch (error) {
-            console.error(chalk.red("\n[WebSocket] Error Monitoring:"), error.message);
-        }
+        console.log(chalk.blue(`Memulai monitoring via polling setiap 1 detik untuk ${this.currentPosition.symbol}...`));
+        this.fallbackToPolling();
     }
 
     /**
@@ -243,7 +149,7 @@ class EngineService {
     fallbackToPolling() {
         if (this.checkInterval || !this.currentPosition) return;
 
-        console.log(chalk.yellow('Mengaktifkan fallback polling setiap 2 detik...'));
+        console.log(chalk.yellow('Mengaktifkan polling setiap 1 detik...'));
         
         this.checkInterval = setInterval(async () => {
             try {
@@ -277,24 +183,13 @@ class EngineService {
             } catch (error) {
                 console.error(chalk.red("\nError Monitoring:"), error.message);
             }
-        }, 2000); // Polling setiap 2 detik saat fallback
+        }, 1000); // Polling setiap 1 detik
     }
 
     stopMonitoring() {
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
-        }
-        
-        // Tutup koneksi WebSocket jika ada
-        if (this.wsSubscription) {
-            try {
-                this.wsSubscription.close();
-                this.wsSubscription = null;
-                console.log(chalk.yellow('[WebSocket] Koneksi WebSocket ditutup'));
-            } catch (error) {
-                console.error(chalk.red('[WebSocket] Error menutup koneksi:'), error.message);
-            }
         }
     }
 
