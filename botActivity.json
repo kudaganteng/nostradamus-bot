@@ -1,5 +1,15 @@
 [
   {
+    "timestamp": "2026-05-12T03:31:38.399Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T03:26:22.799Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
     "timestamp": "2026-05-12T02:54:58.036Z",
     "action": "BOT_STARTED",
     "message": "Scanner dan Logger online."

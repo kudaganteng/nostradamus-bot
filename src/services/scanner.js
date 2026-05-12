@@ -27,7 +27,12 @@ class ScannerService {
             }
 
             const uniqueAddresses = await this.collectUniqueAddresses();
-            if (uniqueAddresses.size === 0) return null;
+            if (uniqueAddresses.size === 0) {
+                process.stdout.write(chalk.red(`\r[Scanner] API lambat/kosong. Mengulang...       `));
+                return null;
+            } else {
+                process.stdout.write(chalk.gray(`\r[Scanner] Mengevaluasi ${uniqueAddresses.size} koin...         `));
+            }
 
             for (const address of uniqueAddresses) {
                 // --- CEK TOKEN COOLDOWN & BLACKLIST ---
@@ -55,11 +60,11 @@ class ScannerService {
                     // Jika koin Solana ditemukan, lempar ke fungsi isMatch
                     if (solanaPair) {
                         const isMatch = this.isMatch(solanaPair);
-                        
+
                         if (isMatch) {
-                            activityLogger.log("SCANNER_MATCH", { 
-                                symbol: solanaPair.baseToken.symbol, 
-                                address: solanaPair.baseToken.address 
+                            activityLogger.log("SCANNER_MATCH", {
+                                symbol: solanaPair.baseToken.symbol,
+                                address: solanaPair.baseToken.address
                             });
                             return solanaPair; // Kembalikan target ke engine
                         }
@@ -84,7 +89,7 @@ class ScannerService {
 
     async collectUniqueAddresses() {
         const addresses = new Set();
-        const requests = this.endpoints.map(url => axios.get(url).catch(() => null));
+        const requests = this.endpoints.map(url => axios.get(url, { timeout: 5000 }).catch(() => null));
         const results = await Promise.all(requests);
 
         results.forEach(res => {
@@ -101,10 +106,10 @@ class ScannerService {
 
     isMatch(pair) {
         const f = config.filters;
-        
+
         if (!pair.pairCreatedAt) return false;
         const pairAgeMinutes = (Date.now() - pair.pairCreatedAt) / (60 * 1000);
-        
+
         // 1. FILTER UMUR
         if (pairAgeMinutes < f.minAgeMinutes || pairAgeMinutes > f.maxAgeMinutes) return false;
 
@@ -122,7 +127,7 @@ class ScannerService {
         const sells5m = txns5m.sells;
 
         if (vol5m < f.minVolume5m || buys5m < f.minBuys5m || sells5m === 0) return false;
-        
+
         const bsRatio = buys5m / sells5m;
         if (bsRatio < f.minBuySellRatio) return false;
 
@@ -130,7 +135,7 @@ class ScannerService {
         const cycles = pairAgeMinutes / 5;
         const avgVolPer5m = vol1h / cycles;
         const volAccel = avgVolPer5m > 0 ? (vol5m / avgVolPer5m) : 0;
-        
+
         if (volAccel < f.volumeAccelRatio) return false;
 
         const avgBuysPer5m = txns1h.buys / cycles;
@@ -143,12 +148,12 @@ class ScannerService {
         const change5m = pair.priceChange?.m5 || 0;
 
         if (change1m > f.maxPriceChange1m || change5m > f.maxPriceChange5m) return false;
-        
+
         // Visualisasi Terminal
         process.stdout.write(
             chalk.green(`\n[GOOD ENTRY] ${pair.baseToken.symbol} | Umur: ${pairAgeMinutes.toFixed(1)}m | Liq: $${Math.round(liq)} | VolAccel: ${volAccel.toFixed(1)}x\n`)
         );
-        
+
         return true;
     }
 }
