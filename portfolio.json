@@ -1,10 +1,10 @@
 {
   "startBalance": 1,
-  "currentBalance": 1,
-  "peakBalance": 1,
+  "currentBalance": 1.0212378126324715,
+  "peakBalance": 1.0212378126324715,
   "maxDrawdown": 0,
-  "tradeCount": 0,
-  "winCount": 0,
+  "tradeCount": 1,
+  "winCount": 1,
   "lossCount": 0,
-  "totalPnLPercent": 0
+  "totalPnLPercent": 2.1237812632471487
 }

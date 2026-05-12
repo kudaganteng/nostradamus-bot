@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "symbol": "chungus",
+    "address": "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump",
+    "pairAddress": "FzaS5nNr1fRC8ijG6iHWBfwrwdmjFkh4AGtCKFEj9pYE",
+    "entryPrice": 0.00004718,
+    "maxPrice": 0.00005219,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-12T06:14:45.138Z",
+    "exitPrice": 0.00005219,
+    "pnl": 10.618906316235696,
+    "reason": "🚀 Moon Target Reached",
+    "closedAt": "2026-05-12T06:15:04.272Z"
+  }
+]

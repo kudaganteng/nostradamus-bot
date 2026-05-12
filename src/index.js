@@ -1,55 +1,50 @@
 const scanner = require('./services/scanner');
-const axios = require('axios');
 const engine = require('./services/engine');
 const activityLogger = require('./utils/activityLogger');
-const storage = require('./utils/storage'); // Wajib di-import
+const storage = require('./utils/storage');
 const chalk = require('chalk');
 
-let isObserving = false; 
-let scanCounter = 0; // Untuk animasi loading
+let isObserving = false;
+let scanCounter = 0;
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function startScanLoop() {
-    // Jika sedang trading atau observasi, jeda scanner
-    if (engine.currentPosition || isObserving) {
-        setTimeout(startScanLoop, 5000);
-        return;
-    }
+    while (true) {
+        const sleepMs = engine.currentPosition || isObserving ? 5000 : 3000;
 
-    try {
-        // --- INDIKATOR BOT BERJALAN ---
-        scanCounter++;
-        const dots = '.'.repeat(scanCounter % 4);
-        process.stdout.write(chalk.gray(`\r[Scanner] Memantau market Solana${dots.padEnd(3)} `));
+        if (!engine.currentPosition && !isObserving) {
+            try {
+                scanCounter++;
+                const dots = '.'.repeat(scanCounter % 4);
+                process.stdout.write(chalk.gray(`\r[Scanner] Memantau market Solana${dots.padEnd(3)} `));
 
-        const target = await scanner.findOpportunities();
+                const target = await scanner.findOpportunities();
 
-        if (target) {
-            console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
-            
-            isObserving = true;
-            const isConfirmed = await engine.observeAndConfirm(target);
-            isObserving = false;
+                if (target) {
+                    console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
 
-            if (isConfirmed) {
-                await engine.openPosition(target);
-            } else {
-                console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown 3 menit karena gagal Breakout.`));
-                
-                // Tambahkan cooldown manual via storage
-                let state = storage.getState();
-                if (!state.tokenStats[target.baseToken.address]) {
-                    state.tokenStats[target.baseToken.address] = { slCount: 0, cooldownUntil: 0, blacklisted: false };
+                    isObserving = true;
+                    const isConfirmed = await engine.observeAndConfirm(target);
+                    isObserving = false;
+
+                    if (isConfirmed) {
+                        await engine.openPosition(target);
+                    } else {
+                        console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown 3 menit karena gagal Breakout.`));
+                        const state = storage.getState();
+                        state.tokenStats[target.baseToken.address] = state.tokenStats[target.baseToken.address] || { slCount: 0, cooldownUntil: 0, blacklisted: false };
+                        state.tokenStats[target.baseToken.address].cooldownUntil = Date.now() + (3 * 60 * 1000);
+                        storage.saveState(state);
+                    }
                 }
-                state.tokenStats[target.baseToken.address].cooldownUntil = Date.now() + (3 * 60 * 1000);
-                storage.saveState(state);
+            } catch (error) {
+                console.error(chalk.red("\n[Loop Error]:"), error.message);
+                isObserving = false;
             }
-        } 
-    } catch (error) {
-        console.error(chalk.red("\n[Loop Error]:"), error.message);
-        isObserving = false;
-    } finally {
-        // Terus berulang setiap 3 detik
-        setTimeout(startScanLoop, 3000);
+        }
+
+        await delay(sleepMs);
     }
 }
 

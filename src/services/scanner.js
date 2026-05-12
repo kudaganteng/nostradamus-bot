@@ -129,15 +129,25 @@ class ScannerService {
         if (bsRatio < f.minBuySellRatio) return false;
 
         // 4. VOLUME & BUYER ACCELERATION
-        const cycles = pairAgeMinutes / 5;
-        const avgVolPer5m = vol1h / cycles;
-        const volAccel = avgVolPer5m > 0 ? (vol5m / avgVolPer5m) : 0;
+        let volAccel = 1.0;
+        let buyerAccel = 1.0;
+
+        // Hanya hitung akselerasi jika koin sudah berumur lebih dari 5 menit
+        if (pairAgeMinutes > 5) {
+            const cycles = pairAgeMinutes / 5;
+            const avgVolPer5m = vol1h / cycles;
+            volAccel = avgVolPer5m > 0 ? (vol5m / avgVolPer5m) : 0;
+
+            const avgBuysPer5m = txns1h.buys / cycles;
+            buyerAccel = avgBuysPer5m > 0 ? (buys5m / avgBuysPer5m) : 0;
+        } else {
+            // Untuk koin di bawah 5 menit, otomatis lolos tes akselerasi 
+            // karena sedang dalam fase penemuan harga (price discovery)
+            volAccel = f.volumeAccelRatio + 0.1;
+            buyerAccel = f.buyerAccelRatio + 0.1;
+        }
 
         if (volAccel < f.volumeAccelRatio) return false;
-
-        const avgBuysPer5m = txns1h.buys / cycles;
-        const buyerAccel = avgBuysPer5m > 0 ? (buys5m / avgBuysPer5m) : 0;
-
         if (buyerAccel < f.buyerAccelRatio) return false;
 
         // 5. ANTI-FOMO / VERTICAL PUMP

@@ -17,36 +17,23 @@ class EngineService {
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
     }
 
-    async getCurrentPrice(pairAddress) {
+    async getCurrentPrice(pairAddress, validateOnChain = false) {
         try {
-            // Kita ambil informasi akun pool dari blockchain
-            const poolPublicKey = new PublicKey(pairAddress);
-            const accountInfo = await this.connection.getParsedAccountInfo(poolPublicKey);
+            const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`, { timeout: 3000 });
+            if (!resp.data || !resp.data.pair) return null;
 
-            // Catatan: Untuk koin yang baru launch (Raydium), 
-            // kita biasanya membutuhkan alamat vault SOL dan vault Token.
-            // Sebagai alternatif yang lebih stabil untuk pemula, 
-            // kita tetap gunakan DexScreener API tapi divalidasi dengan data RPC Alchemy.
+            const price = parseFloat(resp.data.pair.priceUsd);
+            if (!validateOnChain) return price;
 
-            const resp = await axios.get(`https://api.dexscreener.com/latest/dex/pairs/solana/${pairAddress}`, { timeout: 2000 });
-
-            if (resp.data && resp.data.pair) {
-                const price = parseFloat(resp.data.pair.priceUsd);
-
-                // Verifikasi keberadaan token di blockchain via Alchemy
-                // Jika koin sudah di-rugpull (akun dihapus), RPC akan mengembalikan null
-                const tokenAccount = await this.connection.getAccountInfo(new PublicKey(resp.data.pair.baseToken.address));
-
-                if (!tokenAccount) {
-                    activityLogger.log("RPC_WARNING", { message: "Token account not found on-chain. Possible Rugpull." });
-                    return null;
-                }
-
-                return price;
+            const tokenAddress = resp.data.pair.baseToken.address;
+            const tokenAccount = await this.connection.getAccountInfo(new PublicKey(tokenAddress));
+            if (!tokenAccount) {
+                activityLogger.log('RPC_WARNING', { message: 'Token account not found on-chain. Possible Rugpull.' });
+                return null;
             }
-            return null;
+
+            return price;
         } catch (error) {
-            // console.error("RPC/API Error:", error.message);
             return null;
         }
     }
@@ -60,7 +47,7 @@ class EngineService {
         const iterations = Math.floor(obs.durationSeconds / obs.intervalSeconds);
 
         for (let i = 0; i < iterations; i++) {
-            const currentPrice = await this.getCurrentPrice(token.pairAddress);
+            const currentPrice = await this.getCurrentPrice(token.pairAddress, true);
             if (currentPrice) prices.push(currentPrice);
 
             // Tampilkan indikator loading di terminal
@@ -183,18 +170,10 @@ class EngineService {
         }, 3000); // Polling setiap 3 detik agar aman dari rate limit tier gratis
     }
 
-    /**
-     * Mengambil harga terbaru dari DexScreener
-     */
-    async getCurrentPrice(pairAddress) {
-        try {
-            const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`);
-            if (resp.data && resp.data.pair) {
-                return parseFloat(resp.data.pair.priceUsd);
-            }
-            return null;
-        } catch (error) {
-            return null;
+    stopMonitoring() {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
         }
     }
 
@@ -214,8 +193,7 @@ class EngineService {
         // 2. DYNAMIC TRAILING STOP (The "Profit Locker")
         // Cek apakah profit sudah melewati ambang batas aktivasi (misal 5%)
         if (pnl >= c.trailingStartPercent) {
-            // Hitung batas harga jual (Harga Tertinggi - Jarak Trailing)
-            const trailThreshold = this.currentPosition.maxPrice * (1 - (c.trailingDistancePercent / 100));
+            const trailThreshold = this.currentPosition.maxPrice * (1 - (c.trailingStopPercent / 100));
 
             if (currentPrice <= trailThreshold) {
                 this.closePosition(currentPrice, pnl, `🛡️ Trailing Stop: Locked at ${pnl.toFixed(2)}%`);

@@ -8,12 +8,13 @@
     "targetProfitPercent": 10,
     "stopLossPercent": 5,
     "trailingStartPercent": 7,
-    "trailingStopPercent": 3
+    "trailingStopPercent": 3,
+    "timeLimitMinutes": 10
   },
   "observation": {
-    "durationSeconds": 30,
+    "durationSeconds": 15, 
     "intervalSeconds": 5,
-    "maxDumpPercent": 12
+    "maxDumpPercent": 15
   },
   "riskManagement": {
     "slCooldown1xMinutes": 15,
@@ -23,16 +24,16 @@
     "globalPauseMinutes": 30
   },
   "filters": {
-    "minLiquidity": 5000,
-    "maxLiquidity": 300000,
-    "minAgeMinutes": 2,
+    "minLiquidity": 3000,
+    "maxLiquidity": 250000,
+    "minAgeMinutes": 1,
     "maxAgeMinutes": 60,
-    "minVolume5m": 1000,
-    "volumeAccelRatio": 1.2, 
-    "buyerAccelRatio": 1.2, 
-    "minBuySellRatio": 1.1,
-    "minBuys5m": 30,
-    "maxPriceChange5m": 100,
-    "maxPriceChange1m": 30
+    "minVolume5m": 500,
+    "volumeAccelRatio": 1.0, 
+    "buyerAccelRatio": 1.0, 
+    "minBuySellRatio": 1.0,
+    "minBuys5m": 15,
+    "maxPriceChange5m": 200,
+    "maxPriceChange1m": 50
   }
 }

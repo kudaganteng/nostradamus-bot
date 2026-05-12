@@ -1,5 +1,36 @@
 {
   "globalPauseUntil": 0,
   "consecutiveLosses": 0,
-  "tokenStats": {}
+  "tokenStats": {
+    "DTxAL7J6vvDagsFGMgKJuZHPb3qB69W55i6umMkdpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778561528147,
+      "blacklisted": false
+    },
+    "69UtZoyQDoc7QEfqzAec3WJ3n78zAFJBg9NcBLSLpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778562402109,
+      "blacklisted": false
+    },
+    "CiFEFccebs9hWfAYw3rZZzTdjUa6fhCxnpYNstVnpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778564675312,
+      "blacklisted": false
+    },
+    "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778568809144,
+      "blacklisted": false
+    },
+    "hUkeivMpkRDEo2aAXmtbfs1pU68EzrrUjFcccwGpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778566148403,
+      "blacklisted": false
+    },
+    "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump": {
+      "slCount": 0,
+      "cooldownUntil": 1778567186755,
+      "blacklisted": false
+    }
+  }
 }

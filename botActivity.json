@@ -1,5 +1,198 @@
 [
   {
+    "timestamp": "2026-05-12T06:52:43.995Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T06:50:10.499Z",
+    "action": "OBSERVATION_START",
+    "symbol": "chungus"
+  },
+  {
+    "timestamp": "2026-05-12T06:50:10.498Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "chungus",
+    "address": "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump"
+  },
+  {
+    "timestamp": "2026-05-12T06:23:07.207Z",
+    "action": "OBSERVATION_START",
+    "symbol": "traitor"
+  },
+  {
+    "timestamp": "2026-05-12T06:23:07.206Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "traitor",
+    "address": "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump"
+  },
+  {
+    "timestamp": "2026-05-12T06:21:21.337Z",
+    "action": "OBSERVATION_START",
+    "symbol": "chungus"
+  },
+  {
+    "timestamp": "2026-05-12T06:21:21.335Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "chungus",
+    "address": "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump"
+  },
+  {
+    "timestamp": "2026-05-12T06:17:02.858Z",
+    "action": "OBSERVATION_START",
+    "symbol": "traitor"
+  },
+  {
+    "timestamp": "2026-05-12T06:17:02.856Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "traitor",
+    "address": "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump"
+  },
+  {
+    "timestamp": "2026-05-12T06:14:25.673Z",
+    "action": "OBSERVATION_START",
+    "symbol": "chungus"
+  },
+  {
+    "timestamp": "2026-05-12T06:14:25.671Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "chungus",
+    "address": "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump"
+  },
+  {
+    "timestamp": "2026-05-12T06:13:07.817Z",
+    "action": "OBSERVATION_START",
+    "symbol": "traitor"
+  },
+  {
+    "timestamp": "2026-05-12T06:13:07.815Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "traitor",
+    "address": "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump"
+  },
+  {
+    "timestamp": "2026-05-12T06:05:43.767Z",
+    "action": "OBSERVATION_START",
+    "symbol": "VEIL"
+  },
+  {
+    "timestamp": "2026-05-12T06:05:43.765Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "VEIL",
+    "address": "hUkeivMpkRDEo2aAXmtbfs1pU68EzrrUjFcccwGpump"
+  },
+  {
+    "timestamp": "2026-05-12T06:03:58.648Z",
+    "action": "OBSERVATION_START",
+    "symbol": "chungus"
+  },
+  {
+    "timestamp": "2026-05-12T06:03:58.646Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "chungus",
+    "address": "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump"
+  },
+  {
+    "timestamp": "2026-05-12T05:42:53.330Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T05:41:51.933Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T05:41:18.621Z",
+    "action": "OBSERVATION_START",
+    "symbol": "kabina"
+  },
+  {
+    "timestamp": "2026-05-12T05:41:18.619Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "kabina",
+    "address": "CiFEFccebs9hWfAYw3rZZzTdjUa6fhCxnpYNstVnpump"
+  },
+  {
+    "timestamp": "2026-05-12T05:34:04.458Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T05:32:42.480Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T05:28:30.335Z",
+    "action": "OBSERVATION_START",
+    "symbol": "EXIT"
+  },
+  {
+    "timestamp": "2026-05-12T05:28:30.329Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "EXIT",
+    "address": "oUccVjCoHJ54eWkPnMG7o8GEJjpvGwRMvMSpdyhpump"
+  },
+  {
+    "timestamp": "2026-05-12T05:03:21.244Z",
+    "action": "OBSERVATION_START",
+    "symbol": "THIS"
+  },
+  {
+    "timestamp": "2026-05-12T05:03:21.241Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "THIS",
+    "address": "69UtZoyQDoc7QEfqzAec3WJ3n78zAFJBg9NcBLSLpump"
+  },
+  {
+    "timestamp": "2026-05-12T04:59:37.266Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T04:48:37.057Z",
+    "action": "OBSERVATION_START",
+    "symbol": "BADTROLL"
+  },
+  {
+    "timestamp": "2026-05-12T04:48:37.055Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "BADTROLL",
+    "address": "DTxAL7J6vvDagsFGMgKJuZHPb3qB69W55i6umMkdpump"
+  },
+  {
+    "timestamp": "2026-05-12T04:46:29.399Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T04:43:29.903Z",
+    "action": "OBSERVATION_START",
+    "symbol": "AGUA"
+  },
+  {
+    "timestamp": "2026-05-12T04:43:29.900Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "AGUA",
+    "address": "EqoJGGiXc9VBKgDxx2CcXBaLX9B5JjcvANfFAmxFpump"
+  },
+  {
+    "timestamp": "2026-05-12T04:41:17.041Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T04:41:07.306Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T04:37:42.445Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
     "timestamp": "2026-05-12T04:31:44.150Z",
     "action": "BOT_STARTED",
     "message": "Scanner dan Logger online."
