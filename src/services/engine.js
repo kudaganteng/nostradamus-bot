@@ -115,6 +115,143 @@ class EngineService {
         }
     }
 
+    /**
+     * Mengecek Wash Trading menggunakan Gecko Terminal API
+     * Kriteria:
+     * 1. Rata-rata transaksi < $2 = 100% fake volume (bot)
+     * 2. Unique Buyers terlalu sedikit dibanding total transaksi beli (misal: 100 transaksi tapi cuma 2 unique buyers)
+     */
+    async checkWashTrading(tokenAddress, pairAddress) {
+        try {
+            console.log(chalk.cyan(`\\n[Wash Trading Check] 🔍 Menganalisis aktivitas trading untuk ${tokenAddress}...`));
+            
+            // Gunakan Gecko Terminal API untuk mendapatkan data transaksi
+            // Endpoint: https://api.geckoterminal.com/api/v2/networks/solana/tokens/{token_address}/transactions
+            const geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/tokens/${tokenAddress}/transactions`;
+            
+            const response = await axios.get(geckoUrl, {
+                headers: {
+                    'Accept': 'application/json'
+                },
+                timeout: 8000,
+                params: {
+                    limit: 100 // Ambil 100 transaksi terakhir
+                }
+            });
+
+            if (!response.data || !response.data.data || response.data.data.length === 0) {
+                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data transaksi dari Gecko Terminal.'));
+                return false; // Gagal cek, anggap aman
+            }
+
+            const transactions = response.data.data;
+            
+            // Filter hanya transaksi beli (buy transactions)
+            const buyTransactions = transactions.filter(tx => {
+                const attributes = tx.attributes || {};
+                return attributes.transaction_type === 'buy' || attributes.action === 'buy';
+            });
+
+            if (buyTransactions.length === 0) {
+                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada transaksi beli dalam data.'));
+                return false;
+            }
+
+            // Hitung total volume dan total transaksi beli
+            let totalVolumeUsd = 0;
+            const buyerWallets = new Set();
+            
+            buyTransactions.forEach(tx => {
+                const attributes = tx.attributes || {};
+                const volumeUsd = parseFloat(attributes.swap_usd_value || attributes.volume_usd || 0);
+                totalVolumeUsd += volumeUsd;
+                
+                // Kumpulkan unique buyer wallets
+                const buyerAddress = attributes.maker_address || attributes.buyer_address || attributes.user_address;
+                if (buyerAddress) {
+                    buyerWallets.add(buyerAddress.toLowerCase());
+                }
+            });
+
+            const totalBuyTransactions = buyTransactions.length;
+            const uniqueBuyersCount = buyerWallets.size;
+            
+            // Hitung rata-rata nilai per transaksi
+            const avgTransactionValue = totalVolumeUsd / totalBuyTransactions;
+            
+            // Hitung rasio transaksi per unique buyer
+            const transactionsPerBuyer = totalBuyTransactions / uniqueBuyersCount;
+
+            console.log(chalk.gray(`   Total Transaksi Beli (5m): ${totalBuyTransactions}`));
+            console.log(chalk.gray(`   Unique Buyers: ${uniqueBuyersCount}`));
+            console.log(chalk.gray(`   Total Volume: $${totalVolumeUsd.toFixed(2)}`));
+            console.log(chalk.gray(`   Rata-rata per Transaksi: $${avgTransactionValue.toFixed(2)}`));
+            console.log(chalk.gray(`   Transaksi per Buyer: ${transactionsPerBuyer.toFixed(1)}`));
+
+            // --- KRITERIA WASH TRADING ---
+            
+            // 1. Rata-rata transaksi terlalu kecil (< $2) = indikasi bot/fake volume
+            const MIN_AVG_TRANSACTION = 2; // Dollar
+            if (avgTransactionValue < MIN_AVG_TRANSACTION) {
+                console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: Rata-rata transaksi hanya $${avgTransactionValue.toFixed(2)} (Fake Volume!)`));
+                activityLogger.log('WASH_TRADING_DETECTED', { 
+                    token: tokenAddress,
+                    reason: 'low_avg_transaction',
+                    avgTransactionValue: avgTransactionValue.toFixed(2),
+                    totalVolume: totalVolumeUsd.toFixed(2),
+                    totalTransactions: totalBuyTransactions,
+                    uniqueBuyers: uniqueBuyersCount
+                });
+                return true;
+            }
+
+            // 2. Terlalu banyak transaksi dari sedikit unique buyers
+            // Contoh: 100 transaksi dari 2 wallet = 50 transaksi/wallet = pasti bot
+            const MAX_TRANSACTIONS_PER_BUYER = 20; // Jika 1 wallet melakukan > 20 transaksi dalam periode singkat = suspicious
+            
+            if (transactionsPerBuyer > MAX_TRANSACTIONS_PER_BUYER) {
+                console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: ${transactionsPerBuyer.toFixed(1)} transaksi per buyer (Bot Activity!)`));
+                activityLogger.log('WASH_TRADING_DETECTED', { 
+                    token: tokenAddress,
+                    reason: 'high_transactions_per_buyer',
+                    transactionsPerBuyer: transactionsPerBuyer.toFixed(1),
+                    totalTransactions: totalBuyTransactions,
+                    uniqueBuyers: uniqueBuyersCount
+                });
+                return true;
+            }
+
+            // 3. Cek rasio unique buyers terhadap total transaksi
+            // Jika unique buyers < 10% dari total transaksi, sangat suspicious
+            const buyerRatio = uniqueBuyersCount / totalBuyTransactions;
+            const MIN_BUYER_RATIO = 0.1; // 10%
+            
+            if (buyerRatio < MIN_BUYER_RATIO && totalBuyTransactions > 10) {
+                console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: Hanya ${uniqueBuyersCount} unique buyers dari ${totalBuyTransactions} transaksi!`));
+                activityLogger.log('WASH_TRADING_DETECTED', { 
+                    token: tokenAddress,
+                    reason: 'low_unique_buyer_ratio',
+                    buyerRatio: buyerRatio.toFixed(3),
+                    totalTransactions: totalBuyTransactions,
+                    uniqueBuyers: uniqueBuyersCount
+                });
+                return true;
+            }
+
+            console.log(chalk.green(`   ✅ Aktivitas trading terlihat natural (${uniqueBuyersCount} unique buyers, avg $${avgTransactionValue.toFixed(2)}/tx)`));
+            return false;
+
+        } catch (error) {
+            console.log(chalk.yellow(`[Wash Trading Check] ⚠️ Error mengecek wash trading: ${error.message}`));
+            activityLogger.log('WASH_TRADING_CHECK_ERROR', { 
+                token: tokenAddress, 
+                error: error.message 
+            });
+            // Jika error, anggap aman (false) agar tidak reject token karena error teknis
+            return false;
+        }
+    }
+
     async observeAndConfirm(token) {
         activityLogger.log("OBSERVATION_START", { symbol: token.baseToken.symbol });
         const obs = config.observation;
@@ -144,6 +281,13 @@ class EngineService {
         const isMonopolized = await this.checkWalletMonopoly(token.baseToken.address);
         if (isMonopolized) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Terdeteksi monopoli wallet pada token ini.`));
+            return false;
+        }
+
+        // --- FILTER WASH TRADING (BOT ACTIVITY CEK) ---
+        const isWashTrading = await this.checkWashTrading(token.baseToken.address, token.pairAddress);
+        if (isWashTrading) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Terdeteksi Wash Trading / Bot Activity pada token ini.`));
             return false;
         }
 
