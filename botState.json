@@ -1,45 +1,120 @@
 {
   "globalPauseUntil": 0,
-  "consecutiveLosses": 1,
+  "consecutiveLosses": 0,
   "tokenStats": {
-    "DTxAL7J6vvDagsFGMgKJuZHPb3qB69W55i6umMkdpump": {
+    "ytFgsQjLVGJNqwi2wkHgECK7N7u1chGQLnUrT6Ppump": {
       "slCount": 0,
-      "cooldownUntil": 1778561528147,
+      "cooldownUntil": 1778582931195,
       "blacklisted": false
     },
-    "69UtZoyQDoc7QEfqzAec3WJ3n78zAFJBg9NcBLSLpump": {
-      "slCount": 0,
-      "cooldownUntil": 1778562402109,
-      "blacklisted": false
-    },
-    "CiFEFccebs9hWfAYw3rZZzTdjUa6fhCxnpYNstVnpump": {
-      "slCount": 0,
-      "cooldownUntil": 1778564675312,
-      "blacklisted": false
-    },
-    "2oTDPWoekuvgVtesHV5P5ErpxGuyypQaFnKT3bfLpump": {
-      "slCount": 0,
-      "cooldownUntil": 1778568809144,
-      "blacklisted": false
-    },
-    "hUkeivMpkRDEo2aAXmtbfs1pU68EzrrUjFcccwGpump": {
-      "slCount": 0,
-      "cooldownUntil": 1778566148403,
-      "blacklisted": false
-    },
-    "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump": {
+    "Dpse6VGe8eYUiSuikDv5M5JJ86JoWhAm49CyW7V9pump": {
       "slCount": 1,
-      "cooldownUntil": 1778572223976,
+      "cooldownUntil": 1778582805394,
       "blacklisted": false
     },
-    "FSJjkoszKtrfacrv13oG8Mo5xVzWf2TewFUfqMpGpump": {
+    "AyFXHqpFzuzfMivWEMN5dgXbUqTtnRMfn4T36kVBpump": {
+      "slCount": 1,
+      "cooldownUntil": 1778582363758,
+      "blacklisted": true
+    },
+    "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump": {
       "slCount": 0,
-      "cooldownUntil": 1778571519416,
+      "cooldownUntil": 1778584948541,
       "blacklisted": false
     },
-    "85uSwFo4mVpa5GzeXQNLkdTPnndE8oK5zxwsjsEjpump": {
+    "2gXeM4einZoLMSQ5K7s6rHzCAeksU2hRFouBpqSopump": {
+      "slCount": 1,
+      "cooldownUntil": 1778584520985,
+      "blacklisted": false
+    },
+    "7QUs6niiWt5c3vxsvH3cdmHDDjuzCu8dwiZGdtatpump": {
+      "slCount": 1,
+      "cooldownUntil": 0,
+      "blacklisted": true
+    },
+    "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg": {
       "slCount": 0,
-      "cooldownUntil": 1778570049090,
+      "cooldownUntil": 1778587911313,
+      "blacklisted": false
+    },
+    "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump": {
+      "slCount": 2,
+      "cooldownUntil": 1778592600349,
+      "blacklisted": false
+    },
+    "AFaycnPrFsLbHNQKRpXdUzUcsKFENWwkzvSSSToCpump": {
+      "slCount": 1,
+      "cooldownUntil": 1778584885709,
+      "blacklisted": true
+    },
+    "GQh7jpTiTHZo6zffq3434SpYjDwmKp4XzXFiNimWqVZr": {
+      "slCount": 0,
+      "cooldownUntil": 1778584990678,
+      "blacklisted": false
+    },
+    "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump": {
+      "slCount": 2,
+      "cooldownUntil": 1778590642782,
+      "blacklisted": true
+    },
+    "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump": {
+      "slCount": 0,
+      "cooldownUntil": 1778590598543,
+      "blacklisted": false
+    },
+    "5DuWLX7n8Xsiu4BYojqSaMP3NKjoSG3Kb2FRskY9pump": {
+      "slCount": 0,
+      "cooldownUntil": 1778587887163,
+      "blacklisted": false
+    },
+    "FFsQQ94uHvZHuMKDsGQ37wgXcGsHH52EQfTxgBfZbonk": {
+      "slCount": 0,
+      "cooldownUntil": 1778589221836,
+      "blacklisted": false
+    },
+    "DckK945pd9hM8GugbnTX5LQckMJi6Qoi3QLTJWdkpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778589386885,
+      "blacklisted": false
+    },
+    "GPXY56UALMCnKkbPnWKRdEeG6DWvbFafySsG48MRpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778592594786,
+      "blacklisted": false
+    },
+    "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778590558116,
+      "blacklisted": false
+    },
+    "2NXtFf1RqdUCcCM6xh2yPaYGUcp1ymyt65wgQU3Zpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778591361865,
+      "blacklisted": false
+    },
+    "HpFxPG2NTLE1GHoAvprRteMjZfUxLasVegeLN6Cupump": {
+      "slCount": 0,
+      "cooldownUntil": 1778591760020,
+      "blacklisted": false
+    },
+    "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778592528962,
+      "blacklisted": false
+    },
+    "3hqrigP7PiomQQ5RtdYE9kagmo2q4r3euae2fEJWpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778593191837,
+      "blacklisted": false
+    },
+    "DTuthGCM1nMgv1wr6fsHQFoHwzBBCcdpq63gnMFmpump": {
+      "slCount": 0,
+      "cooldownUntil": 1778592570228,
+      "blacklisted": false
+    },
+    "33eum82LaAhtv5YkUq1BdwEviSErH5CnFxqVNLT5pump": {
+      "slCount": 1,
+      "cooldownUntil": 1778593683838,
       "blacklisted": false
     }
   }
