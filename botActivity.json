@@ -1,5 +1,32 @@
 [
   {
+    "timestamp": "2026-05-12T07:22:30.909Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-12T07:10:49.109Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PEPE"
+  },
+  {
+    "timestamp": "2026-05-12T07:10:49.107Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PEPE",
+    "address": "85uSwFo4mVpa5GzeXQNLkdTPnndE8oK5zxwsjsEjpump"
+  },
+  {
+    "timestamp": "2026-05-12T07:07:21.433Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PEPE"
+  },
+  {
+    "timestamp": "2026-05-12T07:07:21.430Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PEPE",
+    "address": "85uSwFo4mVpa5GzeXQNLkdTPnndE8oK5zxwsjsEjpump"
+  },
+  {
     "timestamp": "2026-05-12T06:52:43.995Z",
     "action": "BOT_STARTED",
     "message": "Scanner dan Logger online."
