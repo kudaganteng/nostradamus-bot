@@ -42,6 +42,79 @@ class EngineService {
         }
     }
 
+    /**
+     * Mengecek apakah ada wallet yang memonopoli supply token
+     * Menggunakan Alchemy RPC getTokenLargestAccounts
+     */
+    async checkWalletMonopoly(tokenAddress) {
+        try {
+            console.log(chalk.cyan(`\\n[Monopoly Check] 🔍 Menganalisis distribusi wallet untuk ${tokenAddress}...`));
+            
+            const response = await axios.post(config.rpc.alchemyUrl, {
+                jsonrpc: "2.0",
+                id: 1,
+                method: "getTokenLargestAccounts",
+                params: [tokenAddress]
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                timeout: 5000
+            });
+
+            if (!response.data || !response.data.result || !response.data.result.value) {
+                console.log(chalk.yellow('[Monopoly Check] ⚠️ Gagal mendapatkan data wallet terbesar.'));
+                return false; // Gagal cek, anggap aman agar tidak reject false positive
+            }
+
+            const largestAccounts = response.data.result.value;
+            
+            // Filter out mint authority dan program accounts jika ada
+            const topHolders = largestAccounts.slice(0, 10); // Ambil 10 teratas
+            
+            let totalSupply = 0;
+            let topHolderAmount = 0;
+            
+            topHolders.forEach(account => {
+                const amount = parseFloat(account.amount);
+                totalSupply += amount;
+                if (topHolders.indexOf(account) === 0) {
+                    topHolderAmount = amount;
+                }
+            });
+
+            // Hitung persentase kepemilikan wallet terbesar
+            const monopolyPercent = (topHolderAmount / totalSupply) * 100;
+            
+            console.log(chalk.gray(`   Top 10 holders: ${totalSupply.toFixed(0)} tokens`));
+            console.log(chalk.gray(`   Wallet #1 memegang: ${topHolderAmount.toFixed(0)} tokens (${monopolyPercent.toFixed(2)}%)`));
+
+            // Jika wallet terbesar memegang lebih dari 30% dari top 10 holders, anggap monopoli
+            const MONOPOLY_THRESHOLD = 30;
+            
+            if (monopolyPercent > MONOPOLY_THRESHOLD) {
+                console.log(chalk.red.bold(`   ⚠️ WARNING: Wallet terbesar mengontrol ${monopolyPercent.toFixed(2)}% supply!`));
+                activityLogger.log('MONOPOLY_DETECTED', { 
+                    token: tokenAddress, 
+                    monopolyPercent: monopolyPercent.toFixed(2) 
+                });
+                return true;
+            }
+
+            console.log(chalk.green(`   ✅ Distribusi wallet sehat (${monopolyPercent.toFixed(2)}%)`));
+            return false;
+
+        } catch (error) {
+            console.log(chalk.yellow(`[Monopoly Check] ⚠️ Error mengecek wallet: ${error.message}`));
+            activityLogger.log('MONOPOLY_CHECK_ERROR', { 
+                token: tokenAddress, 
+                error: error.message 
+            });
+            // Jika error, anggap aman (false) agar tidak reject token karena error teknis
+            return false;
+        }
+    }
+
     async observeAndConfirm(token) {
         activityLogger.log("OBSERVATION_START", { symbol: token.baseToken.symbol });
         const obs = config.observation;
@@ -62,6 +135,13 @@ class EngineService {
 
         if (prices.length < 3) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.`));
+            return false;
+        }
+
+        // --- FILTER DOMINASI WALLET (MONOPOLI CEK) ---
+        const isMonopolized = await this.checkWalletMonopoly(token.baseToken.address);
+        if (isMonopolized) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Terdeteksi monopoli wallet pada token ini.`));
             return false;
         }
 
