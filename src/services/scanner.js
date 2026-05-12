@@ -49,25 +49,21 @@ class ScannerService {
                     const pairRes = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${address}`, { timeout: 3000 });
                     const pairs = pairRes.data.pairs;
 
-                    // Pastikan pairs ada sebelum mencoba mencari solanaPair
+                    // Pastikan pairs ada dan merupakan array
                     if (!pairs || !Array.isArray(pairs) || pairs.length === 0) {
                         continue;
                     }
 
-                    // Deklarasi solanaPair dengan benar di dalam scope ini
+                    // Cari pair Solana
                     const solanaPair = pairs.find(p => p.chainId === 'solana');
 
                     // Jika koin Solana ditemukan, lempar ke fungsi isMatch
-                    if (solanaPair) {
-                        const isMatch = this.isMatch(solanaPair);
-
-                        if (isMatch) {
-                            activityLogger.log("SCANNER_MATCH", {
-                                symbol: solanaPair.baseToken.symbol,
-                                address: solanaPair.baseToken.address
-                            });
-                            return solanaPair; // Kembalikan target ke engine
-                        }
+                    if (solanaPair && this.isMatch(solanaPair)) {
+                        activityLogger.log("SCANNER_MATCH", {
+                            symbol: solanaPair.baseToken.symbol,
+                            address: solanaPair.baseToken.address
+                        });
+                        return solanaPair; // Kembalikan target ke engine
                     }
 
                 } catch (innerError) {

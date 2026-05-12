@@ -33,25 +33,6 @@ class EngineService {
             await new Promise(resolve => setTimeout(resolve, obs.intervalSeconds * 1000));
         }
 
-        const result = {
-            initialResistance,
-            localLow,
-            finalPrice,
-            dumpPercent: dumpPercent.toFixed(2) + "%"
-        };
-
-        if (finalPrice > initialResistance && minPricePhase3 >= localLow) {
-            activityLogger.log("OBSERVATION_SUCCESS", { symbol: token.baseToken.symbol, ...result });
-            return true;
-        } else {
-            activityLogger.log("OBSERVATION_FAILED", {
-                symbol: token.baseToken.symbol,
-                reason: finalPrice <= initialResistance ? "No Breakout" : "Structure Broken",
-                ...result
-            });
-            return false;
-        }
-
         if (prices.length < 5) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.`));
             return false;
