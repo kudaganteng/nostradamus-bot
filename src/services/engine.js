@@ -125,65 +125,43 @@ class EngineService {
         try {
             console.log(chalk.cyan(`\\n[Wash Trading Check] 🔍 Menganalisis aktivitas trading untuk ${tokenAddress}...`));
             
-            // Gunakan Gecko Terminal API untuk mendapatkan data transaksi
-            // Endpoint: https://api.geckoterminal.com/api/v2/networks/solana/tokens/{token_address}/transactions
-            const geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/tokens/${tokenAddress}/transactions`;
+            // Gunakan Gecko Terminal API untuk mendapatkan data pool dan transaksi
+            // Endpoint: https://api.geckoterminal.com/api/v2/networks/solana/pools/{pool_address}
+            const geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pairAddress}`;
             
             const response = await axios.get(geckoUrl, {
                 headers: {
                     'Accept': 'application/json'
                 },
-                timeout: 8000,
-                params: {
-                    limit: 100 // Ambil 100 transaksi terakhir
-                }
+                timeout: 8000
             });
 
-            if (!response.data || !response.data.data || response.data.data.length === 0) {
-                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data transaksi dari Gecko Terminal.'));
+            if (!response.data || !response.data.data) {
+                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data pool dari Gecko Terminal.'));
                 return false; // Gagal cek, anggap aman
             }
 
-            const transactions = response.data.data;
+            const poolData = response.data.data;
+            const attributes = poolData.attributes || {};
             
-            // Filter hanya transaksi beli (buy transactions)
-            const buyTransactions = transactions.filter(tx => {
-                const attributes = tx.attributes || {};
-                return attributes.transaction_type === 'buy' || attributes.action === 'buy';
-            });
-
-            if (buyTransactions.length === 0) {
-                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada transaksi beli dalam data.'));
-                return false;
-            }
-
-            // Hitung total volume dan total transaksi beli
-            let totalVolumeUsd = 0;
-            const buyerWallets = new Set();
+            // Ambil data transaksi dari relationships jika tersedia, atau gunakan data pool
+            const txCount = attributes.txns ? attributes.txns.m5.buys : 0;
+            const volumeUsd = attributes.volume_usd || 0;
+            const uniqueBuyersM5 = attributes.unique_buyers_m5 || 0;
             
-            buyTransactions.forEach(tx => {
-                const attributes = tx.attributes || {};
-                const volumeUsd = parseFloat(attributes.swap_usd_value || attributes.volume_usd || 0);
-                totalVolumeUsd += volumeUsd;
-                
-                // Kumpulkan unique buyer wallets
-                const buyerAddress = attributes.maker_address || attributes.buyer_address || attributes.user_address;
-                if (buyerAddress) {
-                    buyerWallets.add(buyerAddress.toLowerCase());
-                }
-            });
+            // Jika tidak ada data transaksi 5 menit, coba ambil dari field lain
+            const totalBuyTransactions = txCount > 0 ? txCount : (attributes.transactions_5m || 0);
+            const totalVolumeUsd = parseFloat(volumeUsd) || 0;
+            const uniqueBuyersCount = uniqueBuyersM5 > 0 ? uniqueBuyersM5 : (attributes.unique_traders_m5 || 0);
 
-            const totalBuyTransactions = buyTransactions.length;
-            const uniqueBuyersCount = buyerWallets.size;
-            
             // Hitung rata-rata nilai per transaksi
-            const avgTransactionValue = totalVolumeUsd / totalBuyTransactions;
+            const avgTransactionValue = totalBuyTransactions > 0 ? (totalVolumeUsd / totalBuyTransactions) : 0;
             
             // Hitung rasio transaksi per unique buyer
-            const transactionsPerBuyer = totalBuyTransactions / uniqueBuyersCount;
+            const transactionsPerBuyer = uniqueBuyersCount > 0 ? (totalBuyTransactions / uniqueBuyersCount) : 0;
 
             console.log(chalk.gray(`   Total Transaksi Beli (5m): ${totalBuyTransactions}`));
-            console.log(chalk.gray(`   Unique Buyers: ${uniqueBuyersCount}`));
+            console.log(chalk.gray(`   Unique Buyers (5m): ${uniqueBuyersCount}`));
             console.log(chalk.gray(`   Total Volume: $${totalVolumeUsd.toFixed(2)}`));
             console.log(chalk.gray(`   Rata-rata per Transaksi: $${avgTransactionValue.toFixed(2)}`));
             console.log(chalk.gray(`   Transaksi per Buyer: ${transactionsPerBuyer.toFixed(1)}`));
@@ -192,7 +170,7 @@ class EngineService {
             
             // 1. Rata-rata transaksi terlalu kecil (< $2) = indikasi bot/fake volume
             const MIN_AVG_TRANSACTION = 2; // Dollar
-            if (avgTransactionValue < MIN_AVG_TRANSACTION) {
+            if (avgTransactionValue < MIN_AVG_TRANSACTION && totalBuyTransactions > 5) {
                 console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: Rata-rata transaksi hanya $${avgTransactionValue.toFixed(2)} (Fake Volume!)`));
                 activityLogger.log('WASH_TRADING_DETECTED', { 
                     token: tokenAddress,
@@ -209,7 +187,7 @@ class EngineService {
             // Contoh: 100 transaksi dari 2 wallet = 50 transaksi/wallet = pasti bot
             const MAX_TRANSACTIONS_PER_BUYER = 20; // Jika 1 wallet melakukan > 20 transaksi dalam periode singkat = suspicious
             
-            if (transactionsPerBuyer > MAX_TRANSACTIONS_PER_BUYER) {
+            if (transactionsPerBuyer > MAX_TRANSACTIONS_PER_BUYER && totalBuyTransactions > 10) {
                 console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: ${transactionsPerBuyer.toFixed(1)} transaksi per buyer (Bot Activity!)`));
                 activityLogger.log('WASH_TRADING_DETECTED', { 
                     token: tokenAddress,
