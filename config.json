@@ -6,7 +6,7 @@
     "paperBalance": 1.0,
     "positionSize": 0.2,
     "targetProfitPercent": 10,
-    "stopLossPercent": 5,
+    "stopLossPercent": 20,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
     "timeLimitMinutes": 10
