@@ -11,5 +11,31 @@
     "pnl": 10.618906316235696,
     "reason": "🚀 Moon Target Reached",
     "closedAt": "2026-05-12T06:15:04.272Z"
+  },
+  {
+    "symbol": "USDRC",
+    "address": "FSJjkoszKtrfacrv13oG8Mo5xVzWf2TewFUfqMpGpump",
+    "pairAddress": "5LPe6Diqp5yEYQatfueciZGveirgqaDDxeAyK6AVMV4j",
+    "entryPrice": 0.0001182,
+    "maxPrice": 0.0001368,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-12T07:33:06.387Z",
+    "exitPrice": 0.0001368,
+    "pnl": 15.736040609137047,
+    "reason": "🚀 Moon Target Reached",
+    "closedAt": "2026-05-12T07:33:39.416Z"
+  },
+  {
+    "symbol": "traitor",
+    "address": "Xuozae7aYJ7dL1FnuuY2oFvQBxuDekZKbXU2z2spump",
+    "pairAddress": "DJmehmMYBrpFkUKjDd12Tus7Dsd1zyXhozMBt24XZ1Kb",
+    "entryPrice": 0.00007375,
+    "maxPrice": 0.00007495,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-12T07:34:59.602Z",
+    "exitPrice": 0.00006645,
+    "pnl": -9.898305084745763,
+    "reason": "❌ Stop Loss Terkena",
+    "closedAt": "2026-05-12T07:35:23.975Z"
   }
 ]

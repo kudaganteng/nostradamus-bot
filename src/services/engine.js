@@ -68,22 +68,25 @@ class EngineService {
         const maxPrice = Math.max(...prices);
 
         // 1. Syarat Trend: Harga akhir harus lebih tinggi dari harga awal (uptrend dasar)
+        // Longgarkan: boleh flat atau sedikit negatif asal tidak > -3%
         const trendPercent = ((endPrice - startPrice) / startPrice) * 100;
-        if (trendPercent <= 0) {
+        if (trendPercent < -3) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Trend negatif (${trendPercent.toFixed(2)}%).`));
             return false;
         }
 
         // 2. Syarat Stabilitas: Tidak ada dump ekstrem (> maxDumpPercent)
+        // Longgarkan dari 15% ke 25% agar tidak menolak token volatile
         const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
-        if (maxDropPercent > obs.maxDumpPercent) {
+        if (maxDropPercent > 25) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas terlalu tinggi (${maxDropPercent.toFixed(2)}%).`));
             return false;
         }
 
         // 3. Syarat Entry: Harga tidak sedang di pucuk (allow some pullback)
+        // Longgarkan dari 5% ke 10% untuk memberikan ruang entry lebih besar
         const fromPeakPercent = ((maxPrice - endPrice) / maxPrice) * 100;
-        if (fromPeakPercent > 5) {
+        if (fromPeakPercent > 10) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Harga turun terlalu jauh dari puncak (${fromPeakPercent.toFixed(2)}%).`));
             return false;
         }

@@ -12,9 +12,9 @@
     "timeLimitMinutes": 10
   },
   "observation": {
-    "durationSeconds": 15, 
-    "intervalSeconds": 5,
-    "maxDumpPercent": 15
+    "durationSeconds": 10, 
+    "intervalSeconds": 3,
+    "maxDumpPercent": 25
   },
   "riskManagement": {
     "slCooldown1xMinutes": 15,
@@ -24,16 +24,16 @@
     "globalPauseMinutes": 30
   },
   "filters": {
-    "minLiquidity": 3000,
-    "maxLiquidity": 250000,
+    "minLiquidity": 2000,
+    "maxLiquidity": 500000,
     "minAgeMinutes": 1,
-    "maxAgeMinutes": 60,
-    "minVolume5m": 500,
-    "volumeAccelRatio": 1.0, 
-    "buyerAccelRatio": 1.0, 
-    "minBuySellRatio": 1.0,
-    "minBuys5m": 15,
-    "maxPriceChange5m": 200,
-    "maxPriceChange1m": 50
+    "maxAgeMinutes": 90,
+    "minVolume5m": 300,
+    "volumeAccelRatio": 0.8, 
+    "buyerAccelRatio": 0.8, 
+    "minBuySellRatio": 0.8,
+    "minBuys5m": 10,
+    "maxPriceChange5m": 300,
+    "maxPriceChange1m": 75
   }
 }
