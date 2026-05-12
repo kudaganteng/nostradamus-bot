@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 node_modules/*
-=======
-Nothing needs to be added to .gitignore since only a JavaScript source file was modified and no build artifacts, dependencies, or temporary files were included in the changes.
->>>>>>> 31fdb48612d8258698d9bff401193c1318511e1c
