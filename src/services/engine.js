@@ -121,7 +121,7 @@ class EngineService {
             console.log(chalk.gray(`   Wallet #1 memegang: ${topHolderAmount.toFixed(0)} tokens (${monopolyPercent.toFixed(2)}%)`));
 
             // Jika wallet terbesar memegang lebih dari 30% dari top 10 holders, anggap monopoli
-            const MONOPOLY_THRESHOLD = 50;
+            const MONOPOLY_THRESHOLD = 70;
             
             if (monopolyPercent > MONOPOLY_THRESHOLD) {
                 console.log(chalk.red.bold(`   ⚠️ WARNING: Wallet terbesar mengontrol ${monopolyPercent.toFixed(2)}% supply!`));
