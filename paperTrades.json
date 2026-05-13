@@ -336,5 +336,18 @@
     "pnl": 23.752495009980052,
     "reason": "🚀 Moon Target Reached",
     "closedAt": "2026-05-12T13:46:19.149Z"
+  },
+  {
+    "symbol": "TEST",
+    "address": "TestTokenAddress123",
+    "pairAddress": "PairAddress456",
+    "entryPrice": 0.000123,
+    "maxPrice": 0.000123,
+    "positionSize": 0.1,
+    "openedAt": "2026-05-13T04:21:13.203Z",
+    "exitPrice": 0.00015,
+    "pnl": 21.95,
+    "reason": "Take Profit",
+    "closedAt": "2026-05-13T04:21:13.207Z"
   }
 ]
