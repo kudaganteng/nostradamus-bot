@@ -1,829 +1,1123 @@
 [
   {
-    "timestamp": "2026-05-12T13:46:46.394Z",
+    "timestamp": "2026-05-13T04:22:41.195Z",
     "action": "OBSERVATION_START",
-    "symbol": "PHOENIX"
+    "symbol": "Laszlo"
   },
   {
-    "timestamp": "2026-05-12T13:46:46.392Z",
+    "timestamp": "2026-05-13T04:22:41.192Z",
     "action": "SCANNER_MATCH",
-    "symbol": "PHOENIX",
-    "address": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump"
+    "symbol": "Laszlo",
+    "address": "H9GCLgEoEWoPVExvyf5zBkD5ViGYqjVuAyU87kdspump"
   },
   {
-    "timestamp": "2026-05-12T13:45:56.530Z",
+    "timestamp": "2026-05-13T04:20:45.974Z",
     "action": "OBSERVATION_START",
-    "symbol": "CZM"
+    "symbol": "bluechip"
   },
   {
-    "timestamp": "2026-05-12T13:45:56.527Z",
+    "timestamp": "2026-05-13T04:20:45.971Z",
     "action": "SCANNER_MATCH",
-    "symbol": "CZM",
-    "address": "6ZM2sFrxQA54yWLe5BXo6kSSdW9trF64hHmfsSFkpump"
+    "symbol": "bluechip",
+    "address": "ByipzBZ8bc6cqrEsucqoqS8wnzKYRsrEYbc63rrNpump"
   },
   {
-    "timestamp": "2026-05-12T13:45:32.994Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T13:39:08.412Z",
-    "action": "WASH_TRADING_CHECK_ERROR",
-    "token": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump",
-    "error": "Request failed with status code 404"
-  },
-  {
-    "timestamp": "2026-05-12T13:38:48.777Z",
+    "timestamp": "2026-05-13T04:18:49.407Z",
     "action": "OBSERVATION_START",
-    "symbol": "RKC"
+    "symbol": "SPCX"
   },
   {
-    "timestamp": "2026-05-12T13:38:48.774Z",
+    "timestamp": "2026-05-13T04:18:49.405Z",
     "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
+    "symbol": "SPCX",
+    "address": "7CJaq6ae1HHSABiatuGMWRVV4gXN4zfYADyAR9Ghpump"
   },
   {
-    "timestamp": "2026-05-12T13:38:43.233Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T13:35:06.713Z",
+    "timestamp": "2026-05-13T04:17:22.014Z",
     "action": "OBSERVATION_START",
-    "symbol": "RKC"
+    "symbol": "BKC"
   },
   {
-    "timestamp": "2026-05-12T13:35:06.711Z",
+    "timestamp": "2026-05-13T04:17:22.011Z",
     "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
+    "symbol": "BKC",
+    "address": "7Rx1Bo5fmELpW58rsmiMzua25UV9qbfFVwhg7hdbpump"
   },
   {
-    "timestamp": "2026-05-12T13:33:30.324Z",
+    "timestamp": "2026-05-13T04:16:04.213Z",
     "action": "OBSERVATION_START",
-    "symbol": "USA"
+    "symbol": "Laszlo"
   },
   {
-    "timestamp": "2026-05-12T13:33:30.321Z",
+    "timestamp": "2026-05-13T04:16:04.205Z",
     "action": "SCANNER_MATCH",
-    "symbol": "USA",
-    "address": "3hqrigP7PiomQQ5RtdYE9kagmo2q4r3euae2fEJWpump"
+    "symbol": "Laszlo",
+    "address": "H9GCLgEoEWoPVExvyf5zBkD5ViGYqjVuAyU87kdspump"
   },
   {
-    "timestamp": "2026-05-12T13:27:05.187Z",
+    "timestamp": "2026-05-13T04:12:43.143Z",
     "action": "OBSERVATION_START",
-    "symbol": "WORLDCUP"
+    "symbol": "NBA"
   },
   {
-    "timestamp": "2026-05-12T13:27:05.184Z",
+    "timestamp": "2026-05-13T04:12:43.140Z",
     "action": "SCANNER_MATCH",
-    "symbol": "WORLDCUP",
-    "address": "33eum82LaAhtv5YkUq1BdwEviSErH5CnFxqVNLT5pump"
+    "symbol": "NBA",
+    "address": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump"
   },
   {
-    "timestamp": "2026-05-12T13:26:15.324Z",
+    "timestamp": "2026-05-13T04:11:02.996Z",
     "action": "OBSERVATION_START",
-    "symbol": "ENGLAND"
+    "symbol": "CTO"
   },
   {
-    "timestamp": "2026-05-12T13:26:15.321Z",
+    "timestamp": "2026-05-13T04:11:02.992Z",
     "action": "SCANNER_MATCH",
-    "symbol": "ENGLAND",
-    "address": "DTuthGCM1nMgv1wr6fsHQFoHwzBBCcdpq63gnMFmpump"
+    "symbol": "CTO",
+    "address": "JBcV5Guz1VqGaqxsogowhKtFxtzipfGZF9JwsY3Zpump"
   },
   {
-    "timestamp": "2026-05-12T13:25:48.960Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump",
-    "monopolyPercent": "60.11"
-  },
-  {
-    "timestamp": "2026-05-12T13:25:34.414Z",
+    "timestamp": "2026-05-13T04:10:24.295Z",
     "action": "OBSERVATION_START",
-    "symbol": "PHOENIX"
+    "symbol": "SPCX"
   },
   {
-    "timestamp": "2026-05-12T13:25:34.411Z",
+    "timestamp": "2026-05-13T04:10:24.292Z",
     "action": "SCANNER_MATCH",
-    "symbol": "PHOENIX",
-    "address": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump"
+    "symbol": "SPCX",
+    "address": "7CJaq6ae1HHSABiatuGMWRVV4gXN4zfYADyAR9Ghpump"
   },
   {
-    "timestamp": "2026-05-12T13:25:16.014Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T13:21:32.851Z",
-    "action": "OBSERVATION_START",
-    "symbol": "GKC"
-  },
-  {
-    "timestamp": "2026-05-12T13:21:32.848Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "GKC",
-    "address": "GPXY56UALMCnKkbPnWKRdEeG6DWvbFafySsG48MRpump"
-  },
-  {
-    "timestamp": "2026-05-12T13:20:57.979Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump",
-    "monopolyPercent": "70.62"
-  },
-  {
-    "timestamp": "2026-05-12T13:20:42.212Z",
-    "action": "OBSERVATION_START",
-    "symbol": "PHOENIX"
-  },
-  {
-    "timestamp": "2026-05-12T13:20:42.210Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "PHOENIX",
-    "address": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:59.170Z",
-    "action": "OBSERVATION_START",
-    "symbol": "USA"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:59.168Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "USA",
-    "address": "3hqrigP7PiomQQ5RtdYE9kagmo2q4r3euae2fEJWpump"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:31.727Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump",
-    "monopolyPercent": "52.58"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:16.346Z",
-    "action": "OBSERVATION_START",
-    "symbol": "PHOENIX"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:16.343Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "PHOENIX",
-    "address": "A5FJAmPeJSs8uA57EcDnfE8Hzf7gsubrKhdVfpMLpump"
-  },
-  {
-    "timestamp": "2026-05-12T13:13:00.017Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "HpFxPG2NTLE1GHoAvprRteMjZfUxLasVegeLN6Cupump",
-    "monopolyPercent": "77.10"
-  },
-  {
-    "timestamp": "2026-05-12T13:12:44.037Z",
-    "action": "OBSERVATION_START",
-    "symbol": "football"
-  },
-  {
-    "timestamp": "2026-05-12T13:12:44.035Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "football",
-    "address": "HpFxPG2NTLE1GHoAvprRteMjZfUxLasVegeLN6Cupump"
-  },
-  {
-    "timestamp": "2026-05-12T13:04:32.162Z",
-    "action": "OBSERVATION_START",
-    "symbol": "BUFO"
-  },
-  {
-    "timestamp": "2026-05-12T13:04:32.159Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "BUFO",
-    "address": "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump"
-  },
-  {
-    "timestamp": "2026-05-12T12:54:06.513Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TROLLANA"
-  },
-  {
-    "timestamp": "2026-05-12T12:54:06.511Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TROLLANA",
-    "address": "2NXtFf1RqdUCcCM6xh2yPaYGUcp1ymyt65wgQU3Zpump"
-  },
-  {
-    "timestamp": "2026-05-12T12:53:38.541Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump",
-    "monopolyPercent": "66.18"
-  },
-  {
-    "timestamp": "2026-05-12T12:53:23.560Z",
-    "action": "OBSERVATION_START",
-    "symbol": "CEREAL GUY"
-  },
-  {
-    "timestamp": "2026-05-12T12:53:23.558Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "CEREAL GUY",
-    "address": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump"
-  },
-  {
-    "timestamp": "2026-05-12T12:52:58.114Z",
+    "timestamp": "2026-05-13T04:10:09.392Z",
     "action": "MONOPOLY_DETECTED",
     "token": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump",
-    "monopolyPercent": "55.77"
+    "monopolyPercent": "52.70"
   },
   {
-    "timestamp": "2026-05-12T12:52:45.009Z",
+    "timestamp": "2026-05-13T04:09:55.220Z",
     "action": "OBSERVATION_START",
     "symbol": "perps"
   },
   {
-    "timestamp": "2026-05-12T12:52:45.006Z",
+    "timestamp": "2026-05-13T04:09:55.217Z",
     "action": "SCANNER_MATCH",
     "symbol": "perps",
     "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
   },
   {
-    "timestamp": "2026-05-12T12:43:00.459Z",
+    "timestamp": "2026-05-13T04:09:33.544Z",
     "action": "OBSERVATION_START",
-    "symbol": "BUFO"
+    "symbol": "BKC"
   },
   {
-    "timestamp": "2026-05-12T12:43:00.457Z",
+    "timestamp": "2026-05-13T04:09:33.541Z",
     "action": "SCANNER_MATCH",
-    "symbol": "BUFO",
-    "address": "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump"
+    "symbol": "BKC",
+    "address": "7Rx1Bo5fmELpW58rsmiMzua25UV9qbfFVwhg7hdbpump"
   },
   {
-    "timestamp": "2026-05-12T12:32:36.443Z",
+    "timestamp": "2026-05-13T04:07:11.018Z",
     "action": "OBSERVATION_START",
-    "symbol": "GKC"
+    "symbol": "TITTY"
   },
   {
-    "timestamp": "2026-05-12T12:32:36.441Z",
+    "timestamp": "2026-05-13T04:07:11.015Z",
     "action": "SCANNER_MATCH",
-    "symbol": "GKC",
-    "address": "GPXY56UALMCnKkbPnWKRdEeG6DWvbFafySsG48MRpump"
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
   },
   {
-    "timestamp": "2026-05-12T12:32:10.522Z",
+    "timestamp": "2026-05-13T04:06:50.476Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump",
-    "monopolyPercent": "73.54"
+    "token": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump",
+    "monopolyPercent": "51.80"
   },
   {
-    "timestamp": "2026-05-12T12:31:53.462Z",
+    "timestamp": "2026-05-13T04:06:37.411Z",
     "action": "OBSERVATION_START",
-    "symbol": "CEREAL GUY"
+    "symbol": "perps"
   },
   {
-    "timestamp": "2026-05-12T12:31:53.460Z",
+    "timestamp": "2026-05-13T04:06:37.408Z",
     "action": "SCANNER_MATCH",
-    "symbol": "CEREAL GUY",
-    "address": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump"
+    "symbol": "perps",
+    "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
   },
   {
-    "timestamp": "2026-05-12T12:31:08.561Z",
+    "timestamp": "2026-05-13T03:56:57.017Z",
     "action": "OBSERVATION_START",
-    "symbol": "UK"
+    "symbol": "NOGUY"
   },
   {
-    "timestamp": "2026-05-12T12:31:08.558Z",
+    "timestamp": "2026-05-13T03:56:57.014Z",
     "action": "SCANNER_MATCH",
-    "symbol": "UK",
-    "address": "DckK945pd9hM8GugbnTX5LQckMJi6Qoi3QLTJWdkpump"
+    "symbol": "NOGUY",
+    "address": "Dk2wjQhBn9sxpMgZHTMriYZsZCXieXVexUzvh13spump"
   },
   {
-    "timestamp": "2026-05-12T12:30:41.834Z",
+    "timestamp": "2026-05-13T03:56:21.296Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "FFsQQ94uHvZHuMKDsGQ37wgXcGsHH52EQfTxgBfZbonk",
-    "monopolyPercent": "52.39"
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "74.03"
   },
   {
-    "timestamp": "2026-05-12T12:30:26.596Z",
+    "timestamp": "2026-05-13T03:56:07.332Z",
     "action": "OBSERVATION_START",
-    "symbol": "football"
+    "symbol": "TROLLGE"
   },
   {
-    "timestamp": "2026-05-12T12:30:26.593Z",
+    "timestamp": "2026-05-13T03:56:07.330Z",
     "action": "SCANNER_MATCH",
-    "symbol": "football",
-    "address": "FFsQQ94uHvZHuMKDsGQ37wgXcGsHH52EQfTxgBfZbonk"
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
   },
   {
-    "timestamp": "2026-05-12T12:19:40.929Z",
+    "timestamp": "2026-05-13T03:54:00.150Z",
     "action": "OBSERVATION_START",
-    "symbol": "RKC"
+    "symbol": "CTO"
   },
   {
-    "timestamp": "2026-05-12T12:19:40.927Z",
+    "timestamp": "2026-05-13T03:54:00.148Z",
     "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
+    "symbol": "CTO",
+    "address": "JBcV5Guz1VqGaqxsogowhKtFxtzipfGZF9JwsY3Zpump"
   },
   {
-    "timestamp": "2026-05-12T12:09:31.825Z",
-    "action": "MONOPOLY_CHECK_ERROR",
-    "token": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump",
-    "error": "timeout of 5000ms exceeded"
-  },
-  {
-    "timestamp": "2026-05-12T12:09:09.552Z",
-    "action": "OBSERVATION_START",
-    "symbol": "CEREAL GUY"
-  },
-  {
-    "timestamp": "2026-05-12T12:09:09.549Z",
+    "timestamp": "2026-05-13T03:43:33.299Z",
     "action": "SCANNER_MATCH",
-    "symbol": "CEREAL GUY",
-    "address": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump"
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
   },
   {
-    "timestamp": "2026-05-12T12:08:51.311Z",
+    "timestamp": "2026-05-13T03:42:55.987Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg",
-    "monopolyPercent": "62.13"
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "71.63"
   },
   {
-    "timestamp": "2026-05-12T12:08:33.332Z",
-    "action": "OBSERVATION_START",
-    "symbol": "Jinbei"
-  },
-  {
-    "timestamp": "2026-05-12T12:08:33.330Z",
+    "timestamp": "2026-05-13T03:42:43.547Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Jinbei",
-    "address": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg"
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
   },
   {
-    "timestamp": "2026-05-12T12:08:27.161Z",
+    "timestamp": "2026-05-13T03:41:57.750Z",
+    "action": "OBSERVATION_START",
+    "symbol": "NBA"
+  },
+  {
+    "timestamp": "2026-05-13T03:41:57.747Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "NBA",
+    "address": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump"
+  },
+  {
+    "timestamp": "2026-05-13T03:41:28.477Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "5DuWLX7n8Xsiu4BYojqSaMP3NKjoSG3Kb2FRskY9pump",
-    "monopolyPercent": "58.42"
+    "token": "En6HDSTn6DbUqPqiG2TuZnsGggEvoKYMTTnYQoBmpump",
+    "monopolyPercent": "58.21"
   },
   {
-    "timestamp": "2026-05-12T12:08:13.533Z",
+    "timestamp": "2026-05-13T03:41:13.874Z",
     "action": "OBSERVATION_START",
-    "symbol": "Fapguy"
+    "symbol": "trencher"
   },
   {
-    "timestamp": "2026-05-12T12:08:13.530Z",
+    "timestamp": "2026-05-13T03:41:13.872Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Fapguy",
-    "address": "5DuWLX7n8Xsiu4BYojqSaMP3NKjoSG3Kb2FRskY9pump"
+    "symbol": "trencher",
+    "address": "En6HDSTn6DbUqPqiG2TuZnsGggEvoKYMTTnYQoBmpump"
   },
   {
-    "timestamp": "2026-05-12T11:57:50.044Z",
+    "timestamp": "2026-05-13T03:40:47.507Z",
     "action": "OBSERVATION_START",
-    "symbol": "BUFO"
+    "symbol": "TITTY"
   },
   {
-    "timestamp": "2026-05-12T11:57:50.042Z",
+    "timestamp": "2026-05-13T03:40:47.505Z",
     "action": "SCANNER_MATCH",
-    "symbol": "BUFO",
-    "address": "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump"
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
   },
   {
-    "timestamp": "2026-05-12T11:57:40.972Z",
+    "timestamp": "2026-05-13T03:39:21.659Z",
+    "action": "OBSERVATION_START",
+    "symbol": "ANDV-26"
+  },
+  {
+    "timestamp": "2026-05-13T03:39:21.657Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "ANDV-26",
+    "address": "HGTXVANx7t1W39yDKWnu68nkEQi3j2pkQUKicxqhpump"
+  },
+  {
+    "timestamp": "2026-05-13T03:38:55.993Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg",
-    "monopolyPercent": "59.18"
+    "token": "AoesPdzXSRiSDcJjMmHEPybG81tbVUcxPeGzL6VFpump",
+    "monopolyPercent": "64.95"
   },
   {
-    "timestamp": "2026-05-12T11:57:27.071Z",
+    "timestamp": "2026-05-13T03:38:42.220Z",
     "action": "OBSERVATION_START",
-    "symbol": "Jinbei"
+    "symbol": "spoof"
   },
   {
-    "timestamp": "2026-05-12T11:57:27.069Z",
+    "timestamp": "2026-05-13T03:38:42.217Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Jinbei",
-    "address": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg"
+    "symbol": "spoof",
+    "address": "AoesPdzXSRiSDcJjMmHEPybG81tbVUcxPeGzL6VFpump"
   },
   {
-    "timestamp": "2026-05-12T11:47:01.528Z",
-    "action": "OBSERVATION_START",
-    "symbol": "RKC"
-  },
-  {
-    "timestamp": "2026-05-12T11:47:01.525Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
-  },
-  {
-    "timestamp": "2026-05-12T11:46:52.509Z",
+    "timestamp": "2026-05-13T03:38:19.155Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "5DuWLX7n8Xsiu4BYojqSaMP3NKjoSG3Kb2FRskY9pump",
-    "monopolyPercent": "53.94"
+    "token": "516eREV3RyhjvTrixBxT7fDBStagVtiSLzyuaNq6pump",
+    "monopolyPercent": "88.31"
   },
   {
-    "timestamp": "2026-05-12T11:46:36.755Z",
+    "timestamp": "2026-05-13T03:38:05.963Z",
     "action": "OBSERVATION_START",
-    "symbol": "Fapguy"
+    "symbol": "COMMUNISM"
   },
   {
-    "timestamp": "2026-05-12T11:46:36.752Z",
+    "timestamp": "2026-05-13T03:38:05.958Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Fapguy",
-    "address": "5DuWLX7n8Xsiu4BYojqSaMP3NKjoSG3Kb2FRskY9pump"
+    "symbol": "COMMUNISM",
+    "address": "516eREV3RyhjvTrixBxT7fDBStagVtiSLzyuaNq6pump"
   },
   {
-    "timestamp": "2026-05-12T11:36:15.723Z",
+    "timestamp": "2026-05-13T03:32:30.342Z",
     "action": "OBSERVATION_START",
-    "symbol": "BUFO"
+    "symbol": "KEVUN"
   },
   {
-    "timestamp": "2026-05-12T11:36:15.721Z",
+    "timestamp": "2026-05-13T03:32:30.337Z",
     "action": "SCANNER_MATCH",
-    "symbol": "BUFO",
-    "address": "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump"
+    "symbol": "KEVUN",
+    "address": "DXwcaZ3atb4WfrzDtkR3EcRhkv2rrbzjKLQxyPjNpump"
   },
   {
-    "timestamp": "2026-05-12T11:33:10.020Z",
+    "timestamp": "2026-05-13T03:27:22.197Z",
     "action": "OBSERVATION_START",
-    "symbol": "TROLLOPOOP"
+    "symbol": "NOGUY"
   },
   {
-    "timestamp": "2026-05-12T11:33:10.017Z",
+    "timestamp": "2026-05-13T03:27:22.191Z",
     "action": "SCANNER_MATCH",
-    "symbol": "TROLLOPOOP",
-    "address": "AFaycnPrFsLbHNQKRpXdUzUcsKFENWwkzvSSSToCpump"
+    "symbol": "NOGUY",
+    "address": "Dk2wjQhBn9sxpMgZHTMriYZsZCXieXVexUzvh13spump"
   },
   {
-    "timestamp": "2026-05-12T11:32:40.157Z",
-    "action": "MONOPOLY_CHECK_ERROR",
-    "token": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump",
-    "error": "timeout of 5000ms exceeded"
-  },
-  {
-    "timestamp": "2026-05-12T11:32:21.547Z",
-    "action": "OBSERVATION_START",
-    "symbol": "CEREAL GUY"
-  },
-  {
-    "timestamp": "2026-05-12T11:32:21.545Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "CEREAL GUY",
-    "address": "9xPgacWhzeRS2FjQeGjVwkY17P5j6fCz8ebbxhw6pump"
-  },
-  {
-    "timestamp": "2026-05-12T11:29:59.871Z",
-    "action": "OBSERVATION_START",
-    "symbol": "RKC"
-  },
-  {
-    "timestamp": "2026-05-12T11:29:59.869Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
-  },
-  {
-    "timestamp": "2026-05-12T11:29:51.192Z",
+    "timestamp": "2026-05-13T03:26:48.689Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg",
-    "monopolyPercent": "58.38"
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "71.51"
   },
   {
-    "timestamp": "2026-05-12T11:29:33.188Z",
+    "timestamp": "2026-05-13T03:26:35.524Z",
     "action": "OBSERVATION_START",
-    "symbol": "Jinbei"
+    "symbol": "TROLLGE"
   },
   {
-    "timestamp": "2026-05-12T11:29:33.186Z",
+    "timestamp": "2026-05-13T03:26:35.519Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Jinbei",
-    "address": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg"
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
   },
   {
-    "timestamp": "2026-05-12T11:20:18.931Z",
-    "action": "OBSERVATION_START",
-    "symbol": "BUFO"
-  },
-  {
-    "timestamp": "2026-05-12T11:20:18.928Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "BUFO",
-    "address": "9fXiyxqYWy9rQeT1zaiU29nuTP7mtnPMQjPoti3wpump"
-  },
-  {
-    "timestamp": "2026-05-12T11:20:10.676Z",
+    "timestamp": "2026-05-13T03:26:03.387Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "GQh7jpTiTHZo6zffq3434SpYjDwmKp4XzXFiNimWqVZr",
-    "monopolyPercent": "70.74"
+    "token": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump",
+    "monopolyPercent": "62.98"
   },
   {
-    "timestamp": "2026-05-12T11:19:55.773Z",
+    "timestamp": "2026-05-13T03:25:49.467Z",
     "action": "OBSERVATION_START",
-    "symbol": "GMO"
+    "symbol": "UTC"
   },
   {
-    "timestamp": "2026-05-12T11:19:55.771Z",
+    "timestamp": "2026-05-13T03:25:49.463Z",
     "action": "SCANNER_MATCH",
-    "symbol": "GMO",
-    "address": "GQh7jpTiTHZo6zffq3434SpYjDwmKp4XzXFiNimWqVZr"
+    "symbol": "UTC",
+    "address": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump"
   },
   {
-    "timestamp": "2026-05-12T11:19:28.538Z",
+    "timestamp": "2026-05-13T03:25:20.364Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump",
-    "monopolyPercent": "50.98"
+    "token": "AoesPdzXSRiSDcJjMmHEPybG81tbVUcxPeGzL6VFpump",
+    "monopolyPercent": "68.15"
   },
   {
-    "timestamp": "2026-05-12T11:19:12.955Z",
+    "timestamp": "2026-05-13T03:25:06.962Z",
     "action": "OBSERVATION_START",
-    "symbol": "TOMA"
+    "symbol": "spoof"
   },
   {
-    "timestamp": "2026-05-12T11:19:12.952Z",
+    "timestamp": "2026-05-13T03:25:06.958Z",
     "action": "SCANNER_MATCH",
-    "symbol": "TOMA",
-    "address": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump"
+    "symbol": "spoof",
+    "address": "AoesPdzXSRiSDcJjMmHEPybG81tbVUcxPeGzL6VFpump"
   },
   {
-    "timestamp": "2026-05-12T11:18:51.009Z",
+    "timestamp": "2026-05-13T03:24:43.734Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg",
-    "monopolyPercent": "56.69"
+    "token": "CKh5aymAabr1EpDDYA535Mq9csoRMWZVM8LLBguzpump",
+    "monopolyPercent": "73.50"
   },
   {
-    "timestamp": "2026-05-12T11:18:33.777Z",
+    "timestamp": "2026-05-13T03:24:28.670Z",
     "action": "OBSERVATION_START",
-    "symbol": "Jinbei"
+    "symbol": "XMUN"
   },
   {
-    "timestamp": "2026-05-12T11:18:33.775Z",
+    "timestamp": "2026-05-13T03:24:28.667Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Jinbei",
-    "address": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg"
+    "symbol": "XMUN",
+    "address": "CKh5aymAabr1EpDDYA535Mq9csoRMWZVM8LLBguzpump"
   },
   {
-    "timestamp": "2026-05-12T11:18:25.706Z",
+    "timestamp": "2026-05-13T03:24:03.576Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AFaycnPrFsLbHNQKRpXdUzUcsKFENWwkzvSSSToCpump",
-    "monopolyPercent": "51.49"
+    "token": "8R6Z9X5F4FreVbdWQWywcuqS3A8tn81gKzn8ARRhpump",
+    "monopolyPercent": "58.66"
   },
   {
-    "timestamp": "2026-05-12T11:18:11.067Z",
+    "timestamp": "2026-05-13T03:23:50.208Z",
     "action": "OBSERVATION_START",
-    "symbol": "TROLLOPOOP"
+    "symbol": "T"
   },
   {
-    "timestamp": "2026-05-12T11:18:11.064Z",
+    "timestamp": "2026-05-13T03:23:50.205Z",
     "action": "SCANNER_MATCH",
-    "symbol": "TROLLOPOOP",
-    "address": "AFaycnPrFsLbHNQKRpXdUzUcsKFENWwkzvSSSToCpump"
+    "symbol": "T",
+    "address": "8R6Z9X5F4FreVbdWQWywcuqS3A8tn81gKzn8ARRhpump"
   },
   {
-    "timestamp": "2026-05-12T11:13:01.710Z",
+    "timestamp": "2026-05-13T03:13:44.972Z",
     "action": "OBSERVATION_START",
-    "symbol": "RKC"
+    "symbol": "perps"
   },
   {
-    "timestamp": "2026-05-12T11:13:01.708Z",
+    "timestamp": "2026-05-13T03:13:44.970Z",
     "action": "SCANNER_MATCH",
-    "symbol": "RKC",
-    "address": "7HgfXftRBBqsYtAEYcqjGLQrNJLL6Tww9ek4rE3Apump"
+    "symbol": "perps",
+    "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
   },
   {
-    "timestamp": "2026-05-12T11:12:55.399Z",
+    "timestamp": "2026-05-13T03:13:38.919Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg",
-    "monopolyPercent": "50.07"
+    "token": "8R6Z9X5F4FreVbdWQWywcuqS3A8tn81gKzn8ARRhpump",
+    "monopolyPercent": "55.69"
   },
   {
-    "timestamp": "2026-05-12T11:12:40.296Z",
+    "timestamp": "2026-05-13T03:13:25.059Z",
     "action": "OBSERVATION_START",
-    "symbol": "Jinbei"
+    "symbol": "T"
   },
   {
-    "timestamp": "2026-05-12T11:12:40.293Z",
+    "timestamp": "2026-05-13T03:13:25.056Z",
     "action": "SCANNER_MATCH",
-    "symbol": "Jinbei",
-    "address": "AmDEFwk3jBxu6Zs5UkUEeGktNUWydQ3B8oDXjK3TtLzg"
+    "symbol": "T",
+    "address": "8R6Z9X5F4FreVbdWQWywcuqS3A8tn81gKzn8ARRhpump"
   },
   {
-    "timestamp": "2026-05-12T11:12:38.186Z",
+    "timestamp": "2026-05-13T03:10:07.066Z",
+    "action": "OBSERVATION_START",
+    "symbol": "ANDV-26"
+  },
+  {
+    "timestamp": "2026-05-13T03:10:07.064Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "ANDV-26",
+    "address": "HGTXVANx7t1W39yDKWnu68nkEQi3j2pkQUKicxqhpump"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:56.290Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump",
+    "monopolyPercent": "62.55"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:44.043Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TITTY"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:44.040Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:23.638Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump",
+    "monopolyPercent": "57.26"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:09.219Z",
+    "action": "OBSERVATION_START",
+    "symbol": "NBA"
+  },
+  {
+    "timestamp": "2026-05-13T03:09:09.216Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "NBA",
+    "address": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump"
+  },
+  {
+    "timestamp": "2026-05-13T03:08:56.021Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump",
+    "monopolyPercent": "57.56"
+  },
+  {
+    "timestamp": "2026-05-13T03:08:42.461Z",
+    "action": "OBSERVATION_START",
+    "symbol": "UTC"
+  },
+  {
+    "timestamp": "2026-05-13T03:08:42.458Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "UTC",
+    "address": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump"
+  },
+  {
+    "timestamp": "2026-05-13T03:07:04.815Z",
+    "action": "OBSERVATION_START",
+    "symbol": "perps"
+  },
+  {
+    "timestamp": "2026-05-13T03:07:04.812Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "perps",
+    "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:56:42.896Z",
+    "action": "OBSERVATION_START",
+    "symbol": "JACKPOT"
+  },
+  {
+    "timestamp": "2026-05-13T02:56:42.894Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "JACKPOT",
+    "address": "D8DWnMsXoy6r4rtdBmXPH94RoRQaRdbxfZakmkQXpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:56:18.360Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "6X5V79NvN85PfSsadfMTokbgbAVzWS8fVELg7CD6AAPL",
+    "monopolyPercent": "72.27"
+  },
+  {
+    "timestamp": "2026-05-13T02:56:05.865Z",
+    "action": "OBSERVATION_START",
+    "symbol": "AAPL"
+  },
+  {
+    "timestamp": "2026-05-13T02:56:05.861Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "AAPL",
+    "address": "6X5V79NvN85PfSsadfMTokbgbAVzWS8fVELg7CD6AAPL"
+  },
+  {
+    "timestamp": "2026-05-13T02:55:45.178Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump",
+    "monopolyPercent": "51.76"
+  },
+  {
+    "timestamp": "2026-05-13T02:55:31.187Z",
+    "action": "OBSERVATION_START",
+    "symbol": "perps"
+  },
+  {
+    "timestamp": "2026-05-13T02:55:31.185Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "perps",
+    "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:45:19.807Z",
+    "action": "OBSERVATION_START",
+    "symbol": "KEVUN"
+  },
+  {
+    "timestamp": "2026-05-13T02:45:19.805Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "KEVUN",
+    "address": "DXwcaZ3atb4WfrzDtkR3EcRhkv2rrbzjKLQxyPjNpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:38:18.713Z",
+    "action": "OBSERVATION_START",
+    "symbol": "NOGUY"
+  },
+  {
+    "timestamp": "2026-05-13T02:38:18.711Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "NOGUY",
+    "address": "Dk2wjQhBn9sxpMgZHTMriYZsZCXieXVexUzvh13spump"
+  },
+  {
+    "timestamp": "2026-05-13T02:37:44.051Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "69.48"
+  },
+  {
+    "timestamp": "2026-05-13T02:37:30.558Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TROLLGE"
+  },
+  {
+    "timestamp": "2026-05-13T02:37:30.554Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
+  },
+  {
+    "timestamp": "2026-05-13T02:36:34.085Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TITTY"
+  },
+  {
+    "timestamp": "2026-05-13T02:36:34.082Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
+  },
+  {
+    "timestamp": "2026-05-13T02:36:10.939Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "ByipzBZ8bc6cqrEsucqoqS8wnzKYRsrEYbc63rrNpump",
+    "monopolyPercent": "52.42"
+  },
+  {
+    "timestamp": "2026-05-13T02:35:58.080Z",
+    "action": "OBSERVATION_START",
+    "symbol": "bluechip"
+  },
+  {
+    "timestamp": "2026-05-13T02:35:58.077Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "bluechip",
+    "address": "ByipzBZ8bc6cqrEsucqoqS8wnzKYRsrEYbc63rrNpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:35:36.283Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "57.30"
+  },
+  {
+    "timestamp": "2026-05-13T02:35:23.357Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T02:35:23.353Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:25:02.978Z",
+    "action": "OBSERVATION_START",
+    "symbol": "LARPGOD"
+  },
+  {
+    "timestamp": "2026-05-13T02:25:02.974Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:24:09.134Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TITTY"
+  },
+  {
+    "timestamp": "2026-05-13T02:24:09.128Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
+  },
+  {
+    "timestamp": "2026-05-13T02:13:33.807Z",
+    "action": "OBSERVATION_START",
+    "symbol": "KEVUN"
+  },
+  {
+    "timestamp": "2026-05-13T02:13:33.804Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "KEVUN",
+    "address": "DXwcaZ3atb4WfrzDtkR3EcRhkv2rrbzjKLQxyPjNpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:03:12.380Z",
+    "action": "OBSERVATION_START",
+    "symbol": "Predictr"
+  },
+  {
+    "timestamp": "2026-05-13T02:03:12.377Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "Predictr",
+    "address": "6SQgSubdpAXfxaTrsYYoAJMUJLua4C6aGNNMr5C9pump"
+  },
+  {
+    "timestamp": "2026-05-13T02:02:38.916Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump",
+    "monopolyPercent": "50.63"
+  },
+  {
+    "timestamp": "2026-05-13T02:02:25.694Z",
+    "action": "OBSERVATION_START",
+    "symbol": "LARPGOD"
+  },
+  {
+    "timestamp": "2026-05-13T02:02:25.691Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
+  },
+  {
+    "timestamp": "2026-05-13T02:01:06.191Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TITTY"
+  },
+  {
+    "timestamp": "2026-05-13T02:01:06.189Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
+  },
+  {
+    "timestamp": "2026-05-13T01:58:53.675Z",
+    "action": "OBSERVATION_START",
+    "symbol": "Monty-Aaron"
+  },
+  {
+    "timestamp": "2026-05-13T01:58:53.673Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "Monty-Aaron",
+    "address": "6aztCndC8EZwD9KmHjL2WWezCx1ZhQnavLG3ZrEtpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:58:35.198Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "55.45"
+  },
+  {
+    "timestamp": "2026-05-13T01:58:21.110Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:58:21.108Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:55:33.413Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TROLLA"
+  },
+  {
+    "timestamp": "2026-05-13T01:55:33.411Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TROLLA",
+    "address": "BwbozsK5zD7nVZGkf8grxBLBNLJhvBaKw6S4UZupump"
+  },
+  {
+    "timestamp": "2026-05-13T01:55:08.920Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "57.00"
+  },
+  {
+    "timestamp": "2026-05-13T01:54:56.262Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:54:56.259Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:44:36.769Z",
+    "action": "OBSERVATION_START",
+    "symbol": "LARPGOD"
+  },
+  {
+    "timestamp": "2026-05-13T01:44:36.766Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:44:02.211Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "58.41"
+  },
+  {
+    "timestamp": "2026-05-13T01:43:49.435Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:43:49.432Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:33:30.527Z",
+    "action": "OBSERVATION_START",
+    "symbol": "JACKPOT"
+  },
+  {
+    "timestamp": "2026-05-13T01:33:30.525Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "JACKPOT",
+    "address": "D8DWnMsXoy6r4rtdBmXPH94RoRQaRdbxfZakmkQXpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:33:07.276Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "CKh5aymAabr1EpDDYA535Mq9csoRMWZVM8LLBguzpump",
+    "monopolyPercent": "60.46"
+  },
+  {
+    "timestamp": "2026-05-13T01:32:53.473Z",
+    "action": "OBSERVATION_START",
+    "symbol": "XMUN"
+  },
+  {
+    "timestamp": "2026-05-13T01:32:53.470Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "XMUN",
+    "address": "CKh5aymAabr1EpDDYA535Mq9csoRMWZVM8LLBguzpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:32:31.873Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3C4qPgC33dJETyxA3Jz2zXpDbetWdDd66aLdhGrEpump",
+    "monopolyPercent": "65.14"
+  },
+  {
+    "timestamp": "2026-05-13T01:32:19.067Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "flop",
+    "address": "3C4qPgC33dJETyxA3Jz2zXpDbetWdDd66aLdhGrEpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:32:14.215Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "62.43"
+  },
+  {
+    "timestamp": "2026-05-13T01:31:59.273Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:31:59.270Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:21:39.464Z",
+    "action": "OBSERVATION_START",
+    "symbol": "POPO"
+  },
+  {
+    "timestamp": "2026-05-13T01:21:39.461Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "POPO",
+    "address": "DhouzHHr16zJcqzpoGNuG7gi9Mk9vMTPfqpSZtFpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:21:04.068Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "65.75"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:52.203Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TROLLGE"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:52.200Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:19.726Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "58.47"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:07.783Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:07.781Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:20:04.461Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump",
+    "monopolyPercent": "50.64"
+  },
+  {
+    "timestamp": "2026-05-13T01:19:50.565Z",
+    "action": "OBSERVATION_START",
+    "symbol": "LARPGOD"
+  },
+  {
+    "timestamp": "2026-05-13T01:19:50.562Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:19:19.760Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "GmbmBhpUNAG7kfAFPNx4hJZ43b7XJLH3ZjnhP82Gpump",
+    "monopolyPercent": "63.40"
+  },
+  {
+    "timestamp": "2026-05-13T01:19:06.997Z",
+    "action": "OBSERVATION_START",
+    "symbol": "VENEZUELA"
+  },
+  {
+    "timestamp": "2026-05-13T01:19:06.994Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "VENEZUELA",
+    "address": "GmbmBhpUNAG7kfAFPNx4hJZ43b7XJLH3ZjnhP82Gpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:18:47.895Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump",
+    "monopolyPercent": "57.90"
+  },
+  {
+    "timestamp": "2026-05-13T01:18:33.820Z",
+    "action": "OBSERVATION_START",
+    "symbol": "UTC"
+  },
+  {
+    "timestamp": "2026-05-13T01:18:33.817Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "UTC",
+    "address": "8JgoBMBrL5R8jKEcv1xxx6CspjLqhCXtPQ5y8oKkpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:11:55.100Z",
+    "action": "OBSERVATION_START",
+    "symbol": "NOGUY"
+  },
+  {
+    "timestamp": "2026-05-13T01:11:55.097Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "NOGUY",
+    "address": "Dk2wjQhBn9sxpMgZHTMriYZsZCXieXVexUzvh13spump"
+  },
+  {
+    "timestamp": "2026-05-13T01:11:04.736Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:11:04.733Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:11:01.072Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump",
+    "monopolyPercent": "65.10"
+  },
+  {
+    "timestamp": "2026-05-13T01:10:47.958Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TROLLGE"
+  },
+  {
+    "timestamp": "2026-05-13T01:10:47.955Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TROLLGE",
+    "address": "3M1YH1CmeH5QwVV4o7tASWSQKbnTYHzUziwpNgWupump"
+  },
+  {
+    "timestamp": "2026-05-13T01:10:12.020Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump",
+    "monopolyPercent": "50.53"
+  },
+  {
+    "timestamp": "2026-05-13T01:09:58.762Z",
+    "action": "OBSERVATION_START",
+    "symbol": "LARPGOD"
+  },
+  {
+    "timestamp": "2026-05-13T01:09:58.760Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:09:25.279Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "Cd9kS4Wd5YUXrxTPjNWyGYqzonZh14rnMAZ228atpump",
+    "monopolyPercent": "56.20"
+  },
+  {
+    "timestamp": "2026-05-13T01:09:12.290Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TREMP"
+  },
+  {
+    "timestamp": "2026-05-13T01:09:12.287Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TREMP",
+    "address": "Cd9kS4Wd5YUXrxTPjNWyGYqzonZh14rnMAZ228atpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:08:51.901Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump",
+    "monopolyPercent": "52.17"
+  },
+  {
+    "timestamp": "2026-05-13T01:08:38.971Z",
+    "action": "OBSERVATION_START",
+    "symbol": "perps"
+  },
+  {
+    "timestamp": "2026-05-13T01:08:38.969Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "perps",
+    "address": "3m7xaVf2ohd5JU1kaG4NASKWhbsscuELLNGJVuJUpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:01:43.108Z",
+    "action": "OBSERVATION_START",
+    "symbol": "Predictr"
+  },
+  {
+    "timestamp": "2026-05-13T01:01:43.105Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "Predictr",
+    "address": "6SQgSubdpAXfxaTrsYYoAJMUJLua4C6aGNNMr5C9pump"
+  },
+  {
+    "timestamp": "2026-05-13T01:01:09.605Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "8SZYQSc5cwnkKLzLN8rJjNYmoqgJw8oBvWXs4mpzpump",
+    "monopolyPercent": "51.02"
+  },
+  {
+    "timestamp": "2026-05-13T01:00:57.676Z",
+    "action": "OBSERVATION_START",
+    "symbol": "FIFA"
+  },
+  {
+    "timestamp": "2026-05-13T01:00:57.674Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "FIFA",
+    "address": "8SZYQSc5cwnkKLzLN8rJjNYmoqgJw8oBvWXs4mpzpump"
+  },
+  {
+    "timestamp": "2026-05-13T01:00:31.496Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump",
+    "monopolyPercent": "53.37"
+  },
+  {
+    "timestamp": "2026-05-13T01:00:17.651Z",
+    "action": "OBSERVATION_START",
+    "symbol": "PNL"
+  },
+  {
+    "timestamp": "2026-05-13T01:00:17.648Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "PNL",
+    "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
+  },
+  {
+    "timestamp": "2026-05-13T00:59:59.964Z",
+    "action": "OBSERVATION_START",
+    "symbol": "POSITIONS"
+  },
+  {
+    "timestamp": "2026-05-13T00:59:59.961Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "POSITIONS",
+    "address": "82YKikrzHE7iMRGpJPqMcHF5WWpicaET732Sgq1Hpump"
+  },
+  {
+    "timestamp": "2026-05-13T00:59:41.561Z",
     "action": "BOT_STARTED",
     "message": "Scanner dan Logger online."
   },
   {
-    "timestamp": "2026-05-12T11:05:49.466Z",
+    "timestamp": "2026-05-13T00:52:14.746Z",
     "action": "OBSERVATION_START",
-    "symbol": "SPAIN"
+    "symbol": "KEVUN"
   },
   {
-    "timestamp": "2026-05-12T11:05:49.463Z",
+    "timestamp": "2026-05-13T00:52:14.744Z",
     "action": "SCANNER_MATCH",
-    "symbol": "SPAIN",
-    "address": "D2bSDzYKpFCePrp98dfN4uuKH1SBnYiiWjwmpYBspump"
+    "symbol": "KEVUN",
+    "address": "DXwcaZ3atb4WfrzDtkR3EcRhkv2rrbzjKLQxyPjNpump"
   },
   {
-    "timestamp": "2026-05-12T11:00:53.292Z",
+    "timestamp": "2026-05-13T00:51:54.300Z",
     "action": "OBSERVATION_START",
-    "symbol": "TRALIEN"
+    "symbol": "DWALLET"
   },
   {
-    "timestamp": "2026-05-12T11:00:53.289Z",
+    "timestamp": "2026-05-13T00:51:54.297Z",
     "action": "SCANNER_MATCH",
-    "symbol": "TRALIEN",
-    "address": "7QUs6niiWt5c3vxsvH3cdmHDDjuzCu8dwiZGdtatpump"
+    "symbol": "DWALLET",
+    "address": "AvBd9xX2piZXtMRaizzja9kdNRgUVEEakYWvHPZmpump"
   },
   {
-    "timestamp": "2026-05-12T10:50:02.688Z",
+    "timestamp": "2026-05-13T00:41:15.164Z",
     "action": "OBSERVATION_START",
-    "symbol": "FRANCE"
+    "symbol": "LARPGOD"
   },
   {
-    "timestamp": "2026-05-12T10:50:02.685Z",
+    "timestamp": "2026-05-13T00:41:15.161Z",
     "action": "SCANNER_MATCH",
-    "symbol": "FRANCE",
-    "address": "2gXeM4einZoLMSQ5K7s6rHzCAeksU2hRFouBpqSopump"
+    "symbol": "LARPGOD",
+    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
   },
   {
-    "timestamp": "2026-05-12T10:48:55.318Z",
+    "timestamp": "2026-05-13T00:40:42.636Z",
     "action": "MONOPOLY_DETECTED",
-    "token": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump",
-    "monopolyPercent": "56.82"
-  },
-  {
-    "timestamp": "2026-05-12T10:48:42.860Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TOMA"
-  },
-  {
-    "timestamp": "2026-05-12T10:48:42.857Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TOMA",
-    "address": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:48:22.105Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T10:47:36.290Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T10:46:23.023Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "2gXeM4einZoLMSQ5K7s6rHzCAeksU2hRFouBpqSopump",
-    "monopolyPercent": "35.80"
-  },
-  {
-    "timestamp": "2026-05-12T10:46:09.544Z",
-    "action": "OBSERVATION_START",
-    "symbol": "FRANCE"
-  },
-  {
-    "timestamp": "2026-05-12T10:46:09.542Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "FRANCE",
-    "address": "2gXeM4einZoLMSQ5K7s6rHzCAeksU2hRFouBpqSopump"
-  },
-  {
-    "timestamp": "2026-05-12T10:45:08.996Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump",
-    "monopolyPercent": "59.10"
-  },
-  {
-    "timestamp": "2026-05-12T10:44:55.384Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TOMA"
-  },
-  {
-    "timestamp": "2026-05-12T10:44:55.382Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TOMA",
-    "address": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:43:20.472Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TRUMPTROLL"
-  },
-  {
-    "timestamp": "2026-05-12T10:43:20.470Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TRUMPTROLL",
-    "address": "ytFgsQjLVGJNqwi2wkHgECK7N7u1chGQLnUrT6Ppump"
-  },
-  {
-    "timestamp": "2026-05-12T10:41:46.013Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump",
-    "monopolyPercent": "58.38"
-  },
-  {
-    "timestamp": "2026-05-12T10:41:33.452Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TOMA"
-  },
-  {
-    "timestamp": "2026-05-12T10:41:33.449Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TOMA",
-    "address": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:41:23.957Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T10:41:15.719Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TOMA"
-  },
-  {
-    "timestamp": "2026-05-12T10:41:15.717Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TOMA",
-    "address": "58DSadE1vLnKXi6XCyujra6GKkLwvAaJN63dygoVpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:40:05.629Z",
-    "action": "OBSERVATION_START",
-    "symbol": "FKE"
-  },
-  {
-    "timestamp": "2026-05-12T10:40:05.626Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "FKE",
-    "address": "AyFXHqpFzuzfMivWEMN5dgXbUqTtnRMfn4T36kVBpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:36:48.347Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TRUMPTROLL"
-  },
-  {
-    "timestamp": "2026-05-12T10:36:48.345Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TRUMPTROLL",
-    "address": "ytFgsQjLVGJNqwi2wkHgECK7N7u1chGQLnUrT6Ppump"
-  },
-  {
-    "timestamp": "2026-05-12T10:36:12.279Z",
-    "action": "OBSERVATION_START",
-    "symbol": "FKE"
-  },
-  {
-    "timestamp": "2026-05-12T10:36:12.274Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "FKE",
-    "address": "AyFXHqpFzuzfMivWEMN5dgXbUqTtnRMfn4T36kVBpump"
-  },
-  {
-    "timestamp": "2026-05-12T10:32:45.632Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T10:31:01.345Z",
-    "action": "OBSERVATION_START",
-    "symbol": "Ker"
-  },
-  {
-    "timestamp": "2026-05-12T10:31:01.343Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "Ker",
-    "address": "Dpse6VGe8eYUiSuikDv5M5JJ86JoWhAm49CyW7V9pump"
-  },
-  {
-    "timestamp": "2026-05-12T10:29:30.801Z",
-    "action": "OBSERVATION_START",
-    "symbol": "TRUMPTROLL"
-  },
-  {
-    "timestamp": "2026-05-12T10:29:30.798Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "TRUMPTROLL",
-    "address": "ytFgsQjLVGJNqwi2wkHgECK7N7u1chGQLnUrT6Ppump"
-  },
-  {
-    "timestamp": "2026-05-12T10:29:10.791Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-12T08:32:58.615Z",
-    "action": "OBSERVATION_START",
-    "symbol": "USDRC"
-  },
-  {
-    "timestamp": "2026-05-12T08:32:58.613Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "USDRC",
-    "address": "FSJjkoszKtrfacrv13oG8Mo5xVzWf2TewFUfqMpGpump"
-  },
-  {
-    "timestamp": "2026-05-12T08:32:36.716Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
+    "token": "DAfjswyVpHSBheLRp651macW1NUwj1UUNd7j5Fqhpump",
+    "monopolyPercent": "75.84"
   }
 ]
