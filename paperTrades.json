@@ -817,5 +817,31 @@
     "pnl": 4.535147392290244,
     "reason": "🔒 Profit Lock: Turun di bawah 6% (Locked 4.54%)",
     "closedAt": "2026-05-13T04:22:18.924Z"
+  },
+  {
+    "symbol": "Laszlo",
+    "address": "H9GCLgEoEWoPVExvyf5zBkD5ViGYqjVuAyU87kdspump",
+    "pairAddress": "46KxxdDVa6ASXsE99PfD7kho3RCxxKuraALfPXpEAG5Y",
+    "entryPrice": 0.00006334,
+    "maxPrice": 0.00007375,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-13T04:22:54.991Z",
+    "exitPrice": 0.00007375,
+    "pnl": 16.435112093463854,
+    "reason": "🚀 Moon Target Reached",
+    "closedAt": "2026-05-13T04:25:41.069Z"
+  },
+  {
+    "symbol": "NBA",
+    "address": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump",
+    "pairAddress": "DueDXNY4N6sg4Qdjoir6y6L2Eeh4NBQiGcfjXvc7gYbd",
+    "entryPrice": 0.000127,
+    "maxPrice": 0.0001425,
+    "positionSize": 0.2,
+    "openedAt": "2026-05-13T04:28:26.621Z",
+    "exitPrice": 0.0001425,
+    "pnl": 12.204724409448817,
+    "reason": "🚀 Moon Target Reached",
+    "closedAt": "2026-05-13T04:30:18.607Z"
   }
 ]

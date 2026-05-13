@@ -1,5 +1,59 @@
 [
   {
+    "timestamp": "2026-05-13T04:30:20.498Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-13T04:28:28.393Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
+    "timestamp": "2026-05-13T04:28:12.094Z",
+    "action": "OBSERVATION_START",
+    "symbol": "NBA"
+  },
+  {
+    "timestamp": "2026-05-13T04:28:12.091Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "NBA",
+    "address": "39yEFw7AMfuYzyvTJTyzKEgHuM5THuak3w27sPv5pump"
+  },
+  {
+    "timestamp": "2026-05-13T04:27:38.860Z",
+    "action": "MONOPOLY_DETECTED",
+    "token": "8SZYQSc5cwnkKLzLN8rJjNYmoqgJw8oBvWXs4mpzpump",
+    "monopolyPercent": "56.29"
+  },
+  {
+    "timestamp": "2026-05-13T04:27:25.479Z",
+    "action": "OBSERVATION_START",
+    "symbol": "FIFA"
+  },
+  {
+    "timestamp": "2026-05-13T04:27:25.476Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "FIFA",
+    "address": "8SZYQSc5cwnkKLzLN8rJjNYmoqgJw8oBvWXs4mpzpump"
+  },
+  {
+    "timestamp": "2026-05-13T04:26:43.722Z",
+    "action": "OBSERVATION_START",
+    "symbol": "TITTY"
+  },
+  {
+    "timestamp": "2026-05-13T04:26:43.719Z",
+    "action": "SCANNER_MATCH",
+    "symbol": "TITTY",
+    "address": "gTi4ZMMM2M7vQqZeetyQpWpjFr57zFZ7MCu4krypump"
+  },
+  {
+    "timestamp": "2026-05-13T04:26:25.778Z",
+    "action": "BOT_STARTED",
+    "message": "Scanner dan Logger online."
+  },
+  {
     "timestamp": "2026-05-13T04:22:41.195Z",
     "action": "OBSERVATION_START",
     "symbol": "Laszlo"
@@ -1064,60 +1118,5 @@
     "action": "SCANNER_MATCH",
     "symbol": "PNL",
     "address": "3oDzEg1v1KLQeL3fWhCTFPssFMzaDqEnYdAY5HZrpump"
-  },
-  {
-    "timestamp": "2026-05-13T00:59:59.964Z",
-    "action": "OBSERVATION_START",
-    "symbol": "POSITIONS"
-  },
-  {
-    "timestamp": "2026-05-13T00:59:59.961Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "POSITIONS",
-    "address": "82YKikrzHE7iMRGpJPqMcHF5WWpicaET732Sgq1Hpump"
-  },
-  {
-    "timestamp": "2026-05-13T00:59:41.561Z",
-    "action": "BOT_STARTED",
-    "message": "Scanner dan Logger online."
-  },
-  {
-    "timestamp": "2026-05-13T00:52:14.746Z",
-    "action": "OBSERVATION_START",
-    "symbol": "KEVUN"
-  },
-  {
-    "timestamp": "2026-05-13T00:52:14.744Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "KEVUN",
-    "address": "DXwcaZ3atb4WfrzDtkR3EcRhkv2rrbzjKLQxyPjNpump"
-  },
-  {
-    "timestamp": "2026-05-13T00:51:54.300Z",
-    "action": "OBSERVATION_START",
-    "symbol": "DWALLET"
-  },
-  {
-    "timestamp": "2026-05-13T00:51:54.297Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "DWALLET",
-    "address": "AvBd9xX2piZXtMRaizzja9kdNRgUVEEakYWvHPZmpump"
-  },
-  {
-    "timestamp": "2026-05-13T00:41:15.164Z",
-    "action": "OBSERVATION_START",
-    "symbol": "LARPGOD"
-  },
-  {
-    "timestamp": "2026-05-13T00:41:15.161Z",
-    "action": "SCANNER_MATCH",
-    "symbol": "LARPGOD",
-    "address": "7cfnkmquW2WkCjHcfPuVySQmBTbV3GLUqLg8digLpump"
-  },
-  {
-    "timestamp": "2026-05-13T00:40:42.636Z",
-    "action": "MONOPOLY_DETECTED",
-    "token": "DAfjswyVpHSBheLRp651macW1NUwj1UUNd7j5Fqhpump",
-    "monopolyPercent": "75.84"
   }
 ]

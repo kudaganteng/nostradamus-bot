@@ -5,7 +5,8 @@
     "botState.json",
     "botActivity.json",
     "node_modules/*",
-    "src/utils/storage.js"
+    "src/utils/storage.js",
+    "activePosition.json"
   ],
   "delay": "1000"
 }
