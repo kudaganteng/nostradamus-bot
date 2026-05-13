@@ -5,6 +5,7 @@ const chalk = require('chalk');
 const TRADES_FILE = path.join(process.cwd(), 'paperTrades.json');
 const PORTFOLIO_FILE = path.join(process.cwd(), 'portfolio.json');
 const STATE_FILE = path.join(process.cwd(), 'botState.json');
+const POSITION_FILE = path.join(process.cwd(), 'activePosition.json');
 
 function readJson(filePath, fallback = null) {
     try {
@@ -97,7 +98,43 @@ const Storage = {
         portfolio.totalPnLPercent = ((portfolio.currentBalance - portfolio.startBalance) / portfolio.startBalance) * 100;
 
         writeJson(PORTFOLIO_FILE, portfolio);
+        
+        // Hapus file posisi aktif setelah trade ditutup
+        if (fs.existsSync(POSITION_FILE)) {
+            fs.unlinkSync(POSITION_FILE);
+        }
+        
         return portfolio;
+    },
+
+    /**
+     * Menyimpan posisi aktif ke file untuk recovery jika bot restart
+     */
+    saveActivePosition(position) {
+        try {
+            writeJson(POSITION_FILE, position);
+            console.log(chalk.green('[Storage] Posisi aktif disimpan untuk recovery.'));
+        } catch (err) {
+            console.error(chalk.red('Gagal menyimpan posisi aktif:'), err.message);
+        }
+    },
+
+    /**
+     * Memuat posisi aktif dari file saat bot restart
+     * @returns {Object|null} Posisi aktif atau null jika tidak ada
+     */
+    loadActivePosition() {
+        try {
+            const position = readJson(POSITION_FILE, null);
+            if (position) {
+                console.log(chalk.green('[Storage] Posisi aktif ditemukan dan dimuat untuk recovery.'));
+                console.log(chalk.cyan(`   Symbol: ${position.symbol}, Entry: $${position.entryPrice.toFixed(6)}`));
+            }
+            return position;
+        } catch (err) {
+            console.error(chalk.red('Gagal memuat posisi aktif:'), err.message);
+            return null;
+        }
     }
 };
 

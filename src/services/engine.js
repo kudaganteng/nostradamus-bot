@@ -12,9 +12,19 @@ class EngineService {
         // Inisialisasi storage saat engine dinyalakan
         storage.init();
         this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
-        this.currentPosition = null;
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
+        
+        // Coba load posisi aktif yang tersimpan dari sesi sebelumnya (recovery)
+        this.currentPosition = storage.loadActivePosition();
+        
+        // Jika ada posisi yang sedang berjalan, lanjutkan monitoring
+        if (this.currentPosition) {
+            console.log(chalk.yellow.bold('\n[RECOVERY] Melanjutkan monitoring posisi yang terbuka...'));
+            this.startMonitoring();
+        } else {
+            this.currentPosition = null;
+        }
     }
 
     async getCurrentPrice(pairAddress, validateOnChain = false) {
@@ -324,6 +334,9 @@ class EngineService {
             positionSize: config.trading.positionSize,
             openedAt: new Date().toISOString()
         };
+
+        // Simpan posisi aktif ke file untuk recovery
+        storage.saveActivePosition(this.currentPosition);
 
         console.log(chalk.green.bold(`\n[BUY] Mengunci target: ${this.currentPosition.symbol}`));
         console.log(chalk.gray(`Entry Price: $${this.currentPosition.entryPrice}`));
