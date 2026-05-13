@@ -410,7 +410,14 @@ class EngineService {
             return;
         }
 
-        // 2. DYNAMIC TRAILING STOP (The "Profit Locker")
+        // 2. PROFIT LOCK AT 6% (Kunci Profit)
+        // Jika profit pernah menyentuh >= 6% lalu turun di bawah 6%, langsung jual untuk mengamankan profit
+        if (maxPnl >= 6 && pnl < 6) {
+            this.closePosition(currentPrice, pnl, `🔒 Profit Lock: Turun di bawah 6% (Locked ${pnl.toFixed(2)}%)`);
+            return;
+        }
+
+        // 3. DYNAMIC TRAILING STOP (The "Profit Locker")
         // Cek apakah profit sudah melewati ambang batas aktivasi (misal 5%)
         if (pnl >= c.trailingStartPercent) {
             const trailThreshold = this.currentPosition.maxPrice * (1 - (c.trailingStopPercent / 100));
@@ -421,13 +428,13 @@ class EngineService {
             }
         }
 
-        // 3. HARD STOP LOSS (-5%)
+        // 4. HARD STOP LOSS (-5%)
         if (pnl <= -c.stopLossPercent) {
             this.closePosition(currentPrice, pnl, "❌ Stop Loss Terkena");
             return;
         }
 
-        // 4. TIME LIMIT (10 Menit)
+        // 5. TIME LIMIT (10 Menit)
         const timeElapsed = (Date.now() - new Date(this.currentPosition.openedAt).getTime()) / (60 * 1000);
         if (timeElapsed >= c.timeLimitMinutes) {
             this.closePosition(currentPrice, pnl, "⌛ Time Limit: No Action");
