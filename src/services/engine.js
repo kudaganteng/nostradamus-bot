@@ -14,16 +14,37 @@ class EngineService {
         this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
+        this.hasRecovered = false; // Flag untuk mencegah recovery berulang
         
         // Coba load posisi aktif yang tersimpan dari sesi sebelumnya (recovery)
+        // HANYA DILAKUKAN SEKALI SAAT BOT DINYALAKAN
         this.currentPosition = storage.loadActivePosition();
         
         // Jika ada posisi yang sedang berjalan, lanjutkan monitoring
         if (this.currentPosition) {
             console.log(chalk.yellow.bold('\n[RECOVERY] Melanjutkan monitoring posisi yang terbuka...'));
             this.startMonitoring();
+            this.hasRecovered = true; // Tandai bahwa recovery sudah dilakukan
         } else {
             this.currentPosition = null;
+        }
+    }
+    
+    /**
+     * Recovery posisi aktif dari sesi sebelumnya - HANYA DIPANGGIL SEKALI DI AWAL
+     */
+    recoverOpenPosition() {
+        if (this.hasRecovered) {
+            console.log(chalk.gray('[Recovery] Recovery sudah dilakukan sebelumnya, melewatkan...'));
+            return;
+        }
+        
+        const recoveredPosition = storage.loadActivePosition();
+        if (recoveredPosition) {
+            this.currentPosition = recoveredPosition;
+            console.log(chalk.yellow.bold('\n[RECOVERY] Melanjutkan monitoring posisi yang terbuka...'));
+            this.startMonitoring();
+            this.hasRecovered = true;
         }
     }
 
@@ -529,6 +550,8 @@ class EngineService {
             console.error("Gagal menutup posisi:", error.message);
         } finally {
             this.currentPosition = null;
+            // Reset flag recovery agar bisa recovery lagi jika bot restart di sesi berikutnya
+            this.hasRecovered = false;
         }
     }
 }
