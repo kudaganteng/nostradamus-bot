@@ -1,3 +1,7 @@
 (src/services/engine.js)
 node_modules/*
 backup-data-json/
+paperTrades.json
+portfolio.json
+botState.json
+botActivity.json
