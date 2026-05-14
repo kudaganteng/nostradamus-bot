@@ -486,6 +486,8 @@ class EngineService {
                 // Update harga tertinggi (untuk Trailing Stop)
                 if (currentPrice > this.currentPosition.maxPrice) {
                     this.currentPosition.maxPrice = currentPrice;
+                    this.currentPosition.maxPriceUpdatedAt = new Date().toISOString();
+                    storage.saveActivePosition(this.currentPosition);
                 }
 
                 // Kalkulasi PNL dari titik tertinggi (Peak PNL)
