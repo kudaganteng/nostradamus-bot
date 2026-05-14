@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 (src/services/engine.js)
 node_modules/*
 backup-data-json/
@@ -5,3 +6,6 @@ paperTrades.json
 portfolio.json
 botState.json
 botActivity.json
+=======
+(src/services/engine.js)
+>>>>>>> 15cadeb8327f603e7d5ab0c90dc08efb75334563
