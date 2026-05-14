@@ -6,12 +6,13 @@ const storage = require('../utils/storage');
 const scanner = require('./scanner');
 const activityLogger = require('../utils/activityLogger');
 const { Connection, PublicKey } = require('@solana/web3.js');
+require('dotenv').config();
 
 class EngineService {
     constructor() {
         // Inisialisasi storage saat engine dinyalakan
         storage.init();
-        this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
+        this.connection = new Connection(process.env.ALCHEMY_RPC_URL, 'confirmed');
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
         this.hasRecovered = false; // Flag untuk mencegah recovery berulang

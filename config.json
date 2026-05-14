@@ -1,7 +1,4 @@
 {
-  "rpc": {
-    "alchemyUrl": "https://solana-mainnet.g.alchemy.com/v2/O-YUgNdFZmxSp_sLS24b8"
-  },
   "trading": {
     "paperBalance": 1.0,
     "positionSize": 0.2,
