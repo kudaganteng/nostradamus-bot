@@ -330,8 +330,28 @@ class EngineService {
             return false;
         }
 
+        // --- HITUNG VOLATILITAS UNTUK DYNAMIC TRAILING STOP & TAKE PROFIT ---
+        // Hitung standar deviasi dari perubahan harga persentase
+        const priceChanges = [];
+        for (let i = 1; i < prices.length; i++) {
+            const change = ((prices[i] - prices[i-1]) / prices[i-1]) * 100;
+            priceChanges.push(change);
+        }
+        
+        // Hitung mean (rata-rata perubahan harga)
+        const meanChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
+        
+        // Hitung standar deviasi (volatilitas)
+        const variance = priceChanges.reduce((a, b) => a + Math.pow(b - meanChange, 2), 0) / priceChanges.length;
+        const volatility = Math.sqrt(variance);
+        
+        // Simpan volatilitas untuk digunakan saat openPosition
+        token.volatility = volatility;
+        token.priceRange = maxDropPercent;
+        
         console.log(chalk.green.bold(`\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!`));
         console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
+        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per detik`));
         return true;
     }
 
@@ -345,6 +365,41 @@ class EngineService {
         }
 
         const price = parseFloat(token.priceUsd);
+        
+        // --- HITUNG DYNAMIC TRAILING STOP & TAKE PROFIT BERDASARKAN VOLATILITAS ---
+        // Gunakan volatilitas yang dihitung selama fase observasi
+        const volatility = token.volatility || 0;
+        const priceRange = token.priceRange || 0;
+        
+        // Logika Dynamic Trailing Stop:
+        // - Volatilitas tinggi (> 1% per detik): trailingStop = 8% (lebih longgar)
+        // - Volatilitas sedang (0.5% - 1%): trailingStop = 5% 
+        // - Volatilitas rendah (< 0.5%): trailingStop = 2% (lebih ketat)
+        let dynamicTrailingStopPercent;
+        if (volatility > 1.0) {
+            dynamicTrailingStopPercent = 8; // Koin liar, trailing stop lebar
+        } else if (volatility >= 0.5) {
+            dynamicTrailingStopPercent = 5; // Volatilitas sedang
+        } else {
+            dynamicTrailingStopPercent = 2; // Koin stabil, trailing stop ketat
+        }
+        
+        // Logika Dynamic Take Profit:
+        // - Volatilitas tinggi: targetProfit = 15% (beri ruang lebih besar untuk profit)
+        // - Volatilitas sedang: targetProfit = 10%
+        // - Volatilitas rendah: targetProfit = 7% (cepat ambil profit)
+        let dynamicTargetProfitPercent;
+        if (volatility > 1.0) {
+            dynamicTargetProfitPercent = 15;
+        } else if (volatility >= 0.5) {
+            dynamicTargetProfitPercent = 10;
+        } else {
+            dynamicTargetProfitPercent = 7;
+        }
+        
+        console.log(chalk.cyan(`\n[Volatility Analysis] Volatilitas: ${volatility.toFixed(4)}% | Price Range: ${priceRange.toFixed(2)}%`));
+        console.log(chalk.green(`   Dynamic Trailing Stop: ${dynamicTrailingStopPercent}%`));
+        console.log(chalk.green(`   Dynamic Take Profit: ${dynamicTargetProfitPercent}%`));
 
         this.currentPosition = {
             symbol: token.baseToken.symbol,
@@ -353,7 +408,11 @@ class EngineService {
             entryPrice: price,
             maxPrice: price, // Digunakan untuk kalkulasi Trailing Stop
             positionSize: config.trading.positionSize,
-            openedAt: new Date().toISOString()
+            openedAt: new Date().toISOString(),
+            // Simpan parameter dinamis untuk digunakan saat monitoring
+            dynamicTrailingStopPercent: dynamicTrailingStopPercent,
+            dynamicTargetProfitPercent: dynamicTargetProfitPercent,
+            volatility: volatility
         };
 
         // Simpan posisi aktif ke file untuk recovery
@@ -436,11 +495,17 @@ class EngineService {
      */
     checkExitConditions(currentPrice, pnl, maxPnl) {
         const c = config.trading;
+        
+        // Gunakan parameter dinamis jika tersedia (dari perhitungan volatilitas)
+        // Jika tidak ada (posisi lama sebelum update), gunakan nilai default dari config
+        const targetProfitPercent = this.currentPosition.dynamicTargetProfitPercent || c.targetProfitPercent;
+        const trailingStopPercent = this.currentPosition.dynamicTrailingStopPercent || c.trailingStopPercent;
+        const trailingStartPercent = c.trailingStartPercent; // Tetap gunakan config untuk trigger awal
 
-        // 1. HARD TAKE PROFIT (10%)
-        // Kalau mau bener-bener agresif, ini bisa dilepas agar koin bisa "ride the trend" lebih jauh
-        if (pnl >= c.targetProfitPercent) {
-            this.closePosition(currentPrice, pnl, "🚀 Moon Target Reached");
+        // 1. DYNAMIC HARD TAKE PROFIT
+        // Menggunakan target profit yang disesuaikan dengan volatilitas
+        if (pnl >= targetProfitPercent) {
+            this.closePosition(currentPrice, pnl, `🚀 Moon Target Reached (${targetProfitPercent}%)`);
             return;
         }
 
@@ -453,11 +518,11 @@ class EngineService {
 
         // 3. DYNAMIC TRAILING STOP (The "Profit Locker")
         // Cek apakah profit sudah melewati ambang batas aktivasi (misal 5%)
-        if (pnl >= c.trailingStartPercent) {
-            const trailThreshold = this.currentPosition.maxPrice * (1 - (c.trailingStopPercent / 100));
+        if (pnl >= trailingStartPercent) {
+            const trailThreshold = this.currentPosition.maxPrice * (1 - (trailingStopPercent / 100));
 
             if (currentPrice <= trailThreshold) {
-                this.closePosition(currentPrice, pnl, `🛡️ Trailing Stop: Locked at ${pnl.toFixed(2)}%`);
+                this.closePosition(currentPrice, pnl, `🛡️ Trailing Stop: Locked at ${pnl.toFixed(2)}% (Dynamic ${trailingStopPercent}%)`);
                 return;
             }
         }
