@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const config = require('../../config.json');
 
 const TRADES_FILE = path.join(process.cwd(), 'paperTrades.json');
 const PORTFOLIO_FILE = path.join(process.cwd(), 'portfolio.json');
@@ -22,21 +23,48 @@ function writeJson(filePath, data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function getInitialPaperBalance() {
+    const balance = Number(config.trading?.paperBalance);
+    return Number.isFinite(balance) && balance > 0 ? balance : 1.0;
+}
+
+function createInitialPortfolio() {
+    const initialBalance = getInitialPaperBalance();
+
+    return {
+        startBalance: initialBalance,
+        currentBalance: initialBalance,
+        peakBalance: initialBalance,
+        maxDrawdown: 0,
+        tradeCount: 0,
+        winCount: 0,
+        lossCount: 0,
+        totalPnLPercent: 0
+    };
+}
+
+function shouldSyncEmptyPortfolio(portfolio) {
+    if (!portfolio) return true;
+    const hasNoTradeHistory = Number(portfolio.tradeCount || 0) === 0;
+    const configuredBalance = getInitialPaperBalance();
+
+    return hasNoTradeHistory && Number(portfolio.startBalance) !== configuredBalance;
+}
+
 const Storage = {
     init() {
         try {
             if (!fs.existsSync(TRADES_FILE)) writeJson(TRADES_FILE, []);
             if (!fs.existsSync(PORTFOLIO_FILE)) {
-                writeJson(PORTFOLIO_FILE, {
-                    startBalance: 1.0,
-                    currentBalance: 1.0,
-                    peakBalance: 1.0,
-                    maxDrawdown: 0,
-                    tradeCount: 0,
-                    winCount: 0,
-                    lossCount: 0,
-                    totalPnLPercent: 0
-                });
+                writeJson(PORTFOLIO_FILE, createInitialPortfolio());
+            } else {
+                const portfolio = readJson(PORTFOLIO_FILE, null);
+
+                // Jika portfolio masih kosong tanpa trade, ikuti config.trading.paperBalance.
+                // Jika sudah ada trade, jangan reset agar histori paper trade tetap aman.
+                if (shouldSyncEmptyPortfolio(portfolio)) {
+                    writeJson(PORTFOLIO_FILE, createInitialPortfolio());
+                }
             }
 
             if (!fs.existsSync(STATE_FILE)) {
@@ -64,16 +92,7 @@ const Storage = {
     },
 
     getPortfolio() {
-        return readJson(PORTFOLIO_FILE, {
-            startBalance: 1.0,
-            currentBalance: 1.0,
-            peakBalance: 1.0,
-            maxDrawdown: 0,
-            tradeCount: 0,
-            winCount: 0,
-            lossCount: 0,
-            totalPnLPercent: 0
-        });
+        return readJson(PORTFOLIO_FILE, createInitialPortfolio());
     },
 
     saveTrade(trade) {
