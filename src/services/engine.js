@@ -346,12 +346,17 @@ class EngineService {
         const variance = priceChanges.reduce((a, b) => a + Math.pow(b - meanChange, 2), 0) / priceChanges.length;
         const volatility = Math.sqrt(variance);
         
-        // Simpan volatilitas untuk digunakan saat openPosition
+        // Simpan hasil observasi untuk digunakan saat openPosition.
+        // Ini mencegah entry memakai token.priceUsd lama dari hasil scanner awal.
         token.volatility = volatility;
         token.priceRange = maxDropPercent;
+        token.confirmedEntryPrice = endPrice;
+        token.observedStartPrice = startPrice;
+        token.observedMaxPrice = maxPrice;
+        token.observedMinPrice = minPrice;
         
         console.log(chalk.green.bold(`\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!`));
-        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
+        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End/Entry: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
         console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per detik`));
         return true;
     }
@@ -365,7 +370,16 @@ class EngineService {
             return;
         }
 
-        const price = parseFloat(token.priceUsd);
+        const price = Number(token.confirmedEntryPrice);
+        if (!Number.isFinite(price) || price <= 0) {
+            console.log(chalk.red("[BUY] Dibatalkan: confirmedEntryPrice tidak valid dari observer."));
+            activityLogger.log('BUY_ABORTED_INVALID_ENTRY_PRICE', {
+                symbol: token.baseToken?.symbol,
+                pairAddress: token.pairAddress,
+                confirmedEntryPrice: token.confirmedEntryPrice
+            });
+            return;
+        }
         
         // --- HITUNG DYNAMIC TRAILING STOP & TAKE PROFIT BERDASARKAN VOLATILITAS ---
         // Gunakan volatilitas yang dihitung selama fase observasi
@@ -410,6 +424,9 @@ class EngineService {
             maxPrice: price, // Digunakan untuk kalkulasi Trailing Stop
             positionSize: config.trading.positionSize,
             openedAt: new Date().toISOString(),
+            observedStartPrice: token.observedStartPrice,
+            observedMaxPrice: token.observedMaxPrice,
+            observedMinPrice: token.observedMinPrice,
             // Simpan parameter dinamis untuk digunakan saat monitoring
             dynamicTrailingStopPercent: dynamicTrailingStopPercent,
             dynamicTargetProfitPercent: dynamicTargetProfitPercent,
