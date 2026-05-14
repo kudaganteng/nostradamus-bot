@@ -469,10 +469,17 @@ class EngineService {
         }
 
         // 5. TIME LIMIT (10 Menit)
+        // Jika PnL masih minus, jangan hentikan trade. Tunggu sampai profit berapapun baru hentikan.
         const timeElapsed = (Date.now() - new Date(this.currentPosition.openedAt).getTime()) / (60 * 1000);
         if (timeElapsed >= c.timeLimitMinutes) {
-            this.closePosition(currentPrice, pnl, "⌛ Time Limit: No Action");
-            return;
+            // Hanya hentikan jika sudah profit (berapapun)
+            if (pnl > 0) {
+                this.closePosition(currentPrice, pnl, "⌛ Time Limit: Profit Achieved");
+                return;
+            } else {
+                // Masih minus, lanjutkan trade meski sudah lewat 10 menit
+                console.log(chalk.yellow(`\\n[Time Limit] ⏰ Sudah ${timeElapsed.toFixed(1)} menit, tapi PnL masih minus (${pnl.toFixed(2)}%). Melanjutkan trade...`));
+            }
         }
     }
 
