@@ -270,14 +270,47 @@ class EngineService {
     }
 
     async getJupiterSellPrice(position, timeoutMs = null) {
+        const markMiss = (reason, extra = {}) => {
+            if (position) {
+                position.lastJupiterMissAt = new Date().toISOString();
+                position.lastJupiterMissReason = reason;
+                position.lastJupiterMissExtra = extra;
+            }
+
+            activityLogger.log('JUPITER_QUOTE_MISS', {
+                symbol: position?.symbol,
+                address: position?.address,
+                reason,
+                ...extra
+            });
+
+            return null;
+        };
+
         try {
             const pm = this.getPriceMonitoringConfig();
-            const tokenUnits = safeNumber(position.receivedTokenUnits, 0);
-            if (!position.address || tokenUnits <= 0) return null;
+            const tokenUnits = safeNumber(position?.receivedTokenUnits, 0);
+
+            if (!position?.address) {
+                return markMiss('missing_position_address');
+            }
+
+            if (tokenUnits <= 0) {
+                return markMiss('missing_or_zero_received_token_units', {
+                    receivedTokenUnits: position?.receivedTokenUnits
+                });
+            }
 
             const decimals = await this.getTokenDecimals(position.address);
             const amount = Math.floor(tokenUnits * Math.pow(10, decimals));
-            if (!Number.isFinite(amount) || amount <= 0) return null;
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                return markMiss('invalid_quote_amount', {
+                    tokenUnits,
+                    decimals,
+                    amount
+                });
+            }
 
             const params = {
                 inputMint: position.address,
@@ -294,24 +327,50 @@ class EngineService {
             });
 
             const outAmountLamports = safeNumber(response.data?.outAmount, 0);
-            if (outAmountLamports <= 0) return null;
+
+            if (outAmountLamports <= 0) {
+                return markMiss('missing_or_zero_out_amount', {
+                    responseData: response.data
+                });
+            }
 
             const outSol = outAmountLamports / Math.pow(10, SOL_DECIMALS);
             const tokenPriceUsd = (outSol / tokenUnits) * pm.assumedSolUsd;
-            if (!Number.isFinite(tokenPriceUsd) || tokenPriceUsd <= 0) return null;
+
+            if (!Number.isFinite(tokenPriceUsd) || tokenPriceUsd <= 0) {
+                return markMiss('invalid_calculated_jupiter_price', {
+                    outSol,
+                    tokenUnits,
+                    assumedSolUsd: pm.assumedSolUsd,
+                    tokenPriceUsd
+                });
+            }
 
             position.lastJupiterQuoteAt = new Date().toISOString();
             position.lastJupiterOutSol = outSol;
             position.lastJupiterPriceUsd = tokenPriceUsd;
             position.lastJupiterPriceImpactPct = response.data?.priceImpactPct;
+            position.lastJupiterMissReason = null;
+            position.lastJupiterMissExtra = null;
 
             return tokenPriceUsd;
         } catch (error) {
+            const errorMessage = error.response?.data?.error || error.response?.data || error.message;
+
             activityLogger.log('JUPITER_QUOTE_ERROR', {
-                symbol: position.symbol,
-                address: position.address,
-                error: error.response?.data?.error || error.message
+                symbol: position?.symbol,
+                address: position?.address,
+                error: errorMessage
             });
+
+            if (position) {
+                position.lastJupiterMissAt = new Date().toISOString();
+                position.lastJupiterMissReason = 'jupiter_request_error';
+                position.lastJupiterMissExtra = {
+                    error: errorMessage
+                };
+            }
+
             return null;
         }
     }
@@ -342,11 +401,35 @@ class EngineService {
 
     async getActivePositionPrice(timeoutMs = null) {
         const pm = this.getPriceMonitoringConfig();
+
         if (pm.source === 'jupiter') {
             const jupiterPrice = await this.getJupiterSellPrice(this.currentPosition, timeoutMs);
-            if (jupiterPrice) return { price: jupiterPrice, source: 'jupiter' };
-            if (!pm.fallbackToDexScreener) return { price: null, source: 'jupiter_miss' };
+
+            if (jupiterPrice) {
+                return { price: jupiterPrice, source: 'jupiter' };
+            }
+
+            const reason = this.currentPosition?.lastJupiterMissReason || 'unknown_jupiter_miss';
+
+            console.log(chalk.yellow(
+                `\n[JUPITER MISS] ${this.currentPosition?.symbol || 'UNKNOWN'}: ${reason}. ` +
+                `Fallback DexScreener: ${pm.fallbackToDexScreener ? 'ON' : 'OFF'}`
+            ));
+
+            activityLogger.log('JUPITER_FALLBACK_DECISION', {
+                symbol: this.currentPosition?.symbol,
+                address: this.currentPosition?.address,
+                reason,
+                fallbackToDexScreener: pm.fallbackToDexScreener
+            });
+
+            storage.saveActivePosition(this.currentPosition);
+
+            if (!pm.fallbackToDexScreener) {
+                return { price: null, source: 'jupiter_miss' };
+            }
         }
+
         const dexPrice = await this.getDexScreenerPrice(this.currentPosition.pairAddress, false, timeoutMs);
         return { price: dexPrice, source: dexPrice ? 'dexscreener' : 'dex_miss' };
     }
