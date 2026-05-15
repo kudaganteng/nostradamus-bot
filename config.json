@@ -8,8 +8,20 @@
     "trailingStopPercent": 3,
     "timeLimitMinutes": 10
   },
+  "paperExecution": {
+    "enabled": true,
+    "buySlippageBps": 80,
+    "sellSlippageBps": 120,
+    "dexFeeBps": 25,
+    "networkFeeSol": 0.00001,
+    "priorityFeeSol": 0.00002,
+    "buyFailureChance": 0.03,
+    "sellFailureChance": 0.05,
+    "maxSellFailureRetries": 2,
+    "sellRetryPenaltyBps": 50
+  },
   "observation": {
-    "durationSeconds": 10, 
+    "durationSeconds": 10,
     "intervalSeconds": 3,
     "maxDumpPercent": 25
   },
@@ -26,8 +38,8 @@
     "minAgeMinutes": 1,
     "maxAgeMinutes": 1440,
     "minVolume5m": 300,
-    "volumeAccelRatio": 0.8, 
-    "buyerAccelRatio": 0.8, 
+    "volumeAccelRatio": 0.8,
+    "buyerAccelRatio": 0.8,
     "minBuySellRatio": 0.8,
     "minBuys5m": 10,
     "maxPriceChange5m": 300,
