@@ -33,23 +33,33 @@ class TelegramService {
     async notifyTrade(type, data) {
         const sign = type === 'BUY' ? '🔵' : '🟢';
         
-        // Untuk SELL/CLOSE, tambahkan detail trade dan portfolio
         if (type === 'SELL') {
             const storage = require('../utils/storage');
             const portfolio = storage.getPortfolio();
-            
-            const profitInSol = (data.pnl / 100) * data.positionSize;
-            const exitValue = data.positionSize + profitInSol;
+            const profitInSol = Number.isFinite(Number(data.netPnlSol))
+                ? Number(data.netPnlSol)
+                : (data.pnl / 100) * data.positionSize;
+            const winRate = portfolio.tradeCount > 0
+                ? ((portfolio.winCount / portfolio.tradeCount) * 100).toFixed(1)
+                : '0.0';
             
             const message = `
 ${sign} *PAPER TRADE ${type}*
 ━━━━━━━━━━━━━━━━━━
 *Token:* ${data.symbol}
-*Entry Price:* $${data.entryPrice}
-*Exit Price:* $${data.exitPrice}
+*Quoted Entry:* $${data.quotedEntryPrice || data.entryPrice}
+*Executed Entry:* $${data.entryPrice}
+*Quoted Exit:* $${data.quotedExitPrice || data.exitPrice}
+*Executed Exit:* $${data.exitPrice}
 *Position Size:* ${data.positionSize} SOL
+*Token Units:* ${Number(data.receivedTokenUnits || 0).toFixed(6)}
 *Profit/Loss:* ${profitInSol >= 0 ? '+' : ''}${profitInSol.toFixed(6)} SOL
-*PNL:* ${data.pnl >= 0 ? '+' : ''}${data.pnl.toFixed(2)}%
+*Net PNL:* ${data.pnl >= 0 ? '+' : ''}${data.pnl.toFixed(2)}%
+*Market PNL:* ${Number(data.grossMarketPnlPercent || data.pnl).toFixed(2)}%
+*Total Fees:* ${Number(data.totalFeeSol || 0).toFixed(6)} SOL
+*Buy Slip:* ${data.buySlippageBps || 0} bps
+*Sell Slip:* ${data.sellSlippageBps || 0} bps
+*Failed Sell Fees:* ${Number(data.accumulatedFailedSellFeesSol || 0).toFixed(6)} SOL
 *Reason:* ${data.reason}
 *Duration:* ${this.formatDuration(data.openedAt, data.closedAt)}
 
@@ -59,19 +69,21 @@ ${sign} *PAPER TRADE ${type}*
 *Balance:* ${portfolio.currentBalance.toFixed(6)} SOL
 *Total PNL:* ${portfolio.totalPnLPercent >= 0 ? '+' : ''}${portfolio.totalPnLPercent.toFixed(2)}%
 *Trades:* ${portfolio.tradeCount} | ✅ ${portfolio.winCount} | ❌ ${portfolio.lossCount}
-*Win Rate:* ${((portfolio.winCount / portfolio.tradeCount) * 100).toFixed(1)}%
+*Win Rate:* ${winRate}%
 *Max Drawdown:* ${portfolio.maxDrawdown.toFixed(2)}%
             `;
             await this.sendMessage(message);
             return;
         }
         
-        // Untuk BUY, tetap gunakan format sederhana
         const message = `
 ${sign} *PAPER TRADE ${type}*
 ━━━━━━━━━━━━━━━━━━
 *Token:* ${data.symbol}
-*Price:* ${data.price}
+*Quoted Price:* $${data.quotedPrice || data.price}
+*Executed Price:* $${data.price}
+*Fee:* ${Number(data.feeSol || 0).toFixed(6)} SOL
+*Slippage:* ${data.slippageBps || 0} bps
 *CA:* \`${data.address}\`
         `;
         await this.sendMessage(message);
