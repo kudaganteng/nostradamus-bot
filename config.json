@@ -71,9 +71,10 @@
       "timeLimitMinutes": 4,
       "minPnlAfterSeconds": 60,
       "minPnlRequired": 1,
+      "earlyExitMaxPnlThreshold": 1,
       "earlyExitRules": [
-        { "seconds": 30, "maxLossPercent": -2.5 },
-        { "seconds": 60, "maxLossPercent": -3.5 }
+        { "seconds": 30, "maxLossPercent": -4 },
+        { "seconds": 60, "maxLossPercent": -5 }
       ]
     },
     "profitLockTiers": [
@@ -81,10 +82,11 @@
       { "maxPnl": 10, "lockPnl": 6 },
       { "maxPnl": 15, "lockPnl": 9 }
     ],
+    "earlyExitMaxPnlThreshold": 1,
     "earlyExitRules": [
-      { "seconds": 30, "maxLossPercent": -4 },
-      { "seconds": 60, "maxLossPercent": -5 },
-      { "seconds": 90, "maxLossPercent": -6 }
+      { "seconds": 30, "maxLossPercent": -5 },
+      { "seconds": 60, "maxLossPercent": -6 },
+      { "seconds": 90, "maxLossPercent": -7 }
     ],
     "minPnlAfterSeconds": 90,
     "minPnlRequired": 2,
