@@ -32,12 +32,17 @@ function bpsToMultiplier(bps) {
     return safeNumber(bps, 0) / 10000;
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 class EngineService {
     constructor() {
         storage.init();
         this.alchemyRpcUrl = getAlchemyRpcUrl();
         this.connection = new Connection(this.alchemyRpcUrl, 'confirmed');
         this.checkInterval = null;
+        this.isPolling = false;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
         this.hasRecovered = false;
         this.currentPosition = storage.loadActivePosition();
@@ -47,6 +52,18 @@ class EngineService {
             this.startMonitoring();
             this.hasRecovered = true;
         }
+    }
+
+    getPriceMonitoringConfig() {
+        const pm = config.priceMonitoring || {};
+        return {
+            source: pm.source || 'dexscreener',
+            activeIntervalMs: Math.max(250, safeNumber(pm.activeIntervalMs, 750)),
+            observationIntervalMs: Math.max(250, safeNumber(pm.observationIntervalMs, 750)),
+            timeoutMs: Math.max(300, safeNumber(pm.timeoutMs, 800)),
+            minDelayMs: Math.max(50, safeNumber(pm.minDelayMs, 150)),
+            validateOnChainOnce: pm.validateOnChainOnce !== false
+        };
     }
 
     getPaperExecutionConfig() {
@@ -133,21 +150,18 @@ class EngineService {
         const positionSizeSol = Math.max(0, safeNumber(marketContext.positionSizeSol, config.trading.positionSize));
         const failedSellAttempts = Math.max(0, safeNumber(marketContext.failedSellAttempts, 0));
         const flatPenaltyBps = marketContext.flatObservation ? 40 : 0;
-
         const volatilityBps = volatility * exec.volatilitySlippageMultiplier;
         const priceRangeBps = priceRange * exec.priceRangeSlippageMultiplier;
         let liquidityBps = 0;
         if (liquidityUsd > 0 && liquidityUsd < exec.lowLiquidityThresholdUsd) {
             liquidityBps = (1 - liquidityUsd / exec.lowLiquidityThresholdUsd) * exec.lowLiquiditySlippageBps;
         }
-
         const positionUsd = positionSizeSol * 150;
         const sizeImpactBps = liquidityUsd > 0 ? (positionUsd / liquidityUsd) * exec.sizeImpactMultiplier * 100 : exec.sizeImpactMultiplier;
         const jitterBps = Math.random() * Math.max(0, exec.randomJitterBps);
         const retryPenaltyBps = isBuy ? 0 : failedSellAttempts * exec.sellRetryPenaltyBps;
         const sellPenaltyMultiplier = isBuy ? 1 : 1.25;
         const raw = base + (volatilityBps * sellPenaltyMultiplier) + (priceRangeBps * sellPenaltyMultiplier) + liquidityBps + sizeImpactBps + jitterBps + retryPenaltyBps + flatPenaltyBps;
-
         return {
             slippageBps: clampNumber(raw, min, max, base),
             breakdown: { mode: 'dynamic', baseBps: base, volatilityBps, priceRangeBps, liquidityBps, sizeImpactBps, jitterBps, retryPenaltyBps, flatPenaltyBps, liquidityUsd, positionSizeSol, failedSellAttempts }
@@ -165,13 +179,10 @@ class EngineService {
     simulateBuyExecution(quotedPrice, positionSizeSol, token = {}) {
         const exec = this.getPaperExecutionConfig();
         if (!exec.enabled) return { ok: true, quotedPrice, executionPrice: quotedPrice, feeSol: 0, slippageBps: 0, slippageBreakdown: null, failureChance: 0, dexFeeBps: 0, receivedTokenUnits: positionSizeSol / quotedPrice, spentSol: positionSizeSol, failureReason: null };
-
         const liquidityUsd = safeNumber(token.liquidity?.usd || token.liquidityUsd, 0);
         const slippage = this.calculateDynamicSlippage('buy', { volatility: token.volatility, priceRange: token.priceRange, liquidityUsd, positionSizeSol, flatObservation: token.flatObservation });
         const failureChance = exec.dynamicSlippage ? this.calculateDynamicFailureChance('buy', slippage.slippageBps) : exec.buyFailureChance;
-
         if (this.shouldSimulateFailure(failureChance)) return { ok: false, quotedPrice, executionPrice: null, feeSol: exec.networkFeeSol, slippageBps: slippage.slippageBps, slippageBreakdown: slippage.breakdown, failureChance, dexFeeBps: exec.dexFeeBps, receivedTokenUnits: 0, spentSol: exec.networkFeeSol, failureReason: 'Simulated BUY failed: RPC timeout / route changed / blockhash expired' };
-
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
         const effectiveSpendSol = Math.max(positionSizeSol - feeSol, 0);
         const executionPrice = quotedPrice * (1 + bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps));
@@ -187,11 +198,9 @@ class EngineService {
             const netPnlSol = grossReturnSol - position.positionSize;
             return { ok: true, quotedPrice, executionPrice: quotedPrice, feeSol: 0, slippageBps: 0, slippageBreakdown: null, failureChance: 0, dexFeeBps: 0, grossReturnSol, netReturnSol: grossReturnSol, netPnlSol, netPnlPercent: (netPnlSol / position.positionSize) * 100, failureReason: null, reason };
         }
-
         const slippage = this.calculateDynamicSlippage('sell', { volatility: position.volatility, priceRange: position.priceRange, liquidityUsd: position.liquidityUsd, positionSizeSol: position.positionSize, failedSellAttempts, flatObservation: position.flatObservation });
         const failureChance = exec.dynamicSlippage ? this.calculateDynamicFailureChance('sell', slippage.slippageBps) : exec.sellFailureChance;
         if (this.shouldSimulateFailure(failureChance) && failedSellAttempts < exec.maxSellFailureRetries) return { ok: false, quotedPrice, executionPrice: null, feeSol: exec.networkFeeSol, slippageBps: slippage.slippageBps, slippageBreakdown: slippage.breakdown, failureChance, dexFeeBps: exec.dexFeeBps, grossReturnSol: 0, netReturnSol: -exec.networkFeeSol, netPnlSol: null, netPnlPercent: null, failureReason: 'Simulated SELL failed: slippage exceeded / transaction not landed', reason };
-
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
         const executionPrice = Math.max(quotedPrice * (1 - bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps)), 0);
         const tokenUnits = safeNumber(position.receivedTokenUnits, 0);
@@ -212,19 +221,31 @@ class EngineService {
         }
     }
 
-    async getCurrentPrice(pairAddress, validateOnChain = false) {
+    async validateTokenOnChain(tokenAddress) {
         try {
-            const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`, { timeout: 3000 });
-            if (!resp.data || !resp.data.pair) return null;
-            const price = parseFloat(resp.data.pair.priceUsd);
-            if (!validateOnChain) return price;
-            const tokenAddress = resp.data.pair.baseToken.address;
             const tokenAccount = await this.connection.getAccountInfo(new PublicKey(tokenAddress));
             if (!tokenAccount) {
-                activityLogger.log('RPC_WARNING', { message: 'Token account not found on-chain. Possible Rugpull.' });
-                return null;
+                activityLogger.log('RPC_WARNING', { message: 'Token account not found on-chain. Possible Rugpull.', tokenAddress });
+                return false;
             }
-            return price;
+            return true;
+        } catch (error) {
+            activityLogger.log('RPC_WARNING', { message: 'Token validation failed', tokenAddress, error: error.message });
+            return false;
+        }
+    }
+
+    async getCurrentPrice(pairAddress, validateOnChain = false, timeoutMs = null) {
+        try {
+            const pm = this.getPriceMonitoringConfig();
+            const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`, { timeout: timeoutMs || pm.timeoutMs });
+            if (!resp.data || !resp.data.pair) return null;
+            const price = parseFloat(resp.data.pair.priceUsd);
+            if (!Number.isFinite(price) || price <= 0) return null;
+            if (!validateOnChain) return price;
+            const tokenAddress = resp.data.pair.baseToken.address;
+            const isValid = await this.validateTokenOnChain(tokenAddress);
+            return isValid ? price : null;
         } catch (error) {
             if (error.response?.status === 429) {
                 console.log(chalk.yellow.bold('\\n[⚠️ RATE LIMIT] Error 429: Terlalu banyak request. Memperlambat refresh...'));
@@ -339,19 +360,32 @@ class EngineService {
         activityLogger.log('OBSERVATION_START', { symbol: token.baseToken.symbol });
         const obs = config.observation;
         const ar = this.getAdaptiveRiskConfig();
+        const pm = this.getPriceMonitoringConfig();
         console.log(chalk.cyan(`\n[Observer] 🕵️ Menunda Entry. Mengawasi ${token.baseToken.symbol} selama ${obs.durationSeconds} detik...`));
-        const prices = [];
-        const iterations = Math.floor(obs.durationSeconds / 1);
-        for (let i = 0; i < iterations; i++) {
-            const currentPrice = await this.getCurrentPrice(token.pairAddress, true);
-            if (currentPrice) prices.push(currentPrice);
-            process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length}/${iterations} detik...\r`));
-            await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (pm.validateOnChainOnce) {
+            const isValid = await this.validateTokenOnChain(token.baseToken.address);
+            if (!isValid) {
+                console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Token account tidak valid on-chain.'));
+                return false;
+            }
         }
+
+        const prices = [];
+        const startedAt = Date.now();
+        const durationMs = safeNumber(obs.durationSeconds, 10) * 1000;
+        while (Date.now() - startedAt < durationMs) {
+            const currentPrice = await this.getCurrentPrice(token.pairAddress, false, pm.timeoutMs);
+            if (currentPrice) prices.push(currentPrice);
+            process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length} tick...\r`));
+            await sleep(pm.observationIntervalMs);
+        }
+
         if (prices.length < 3) {
-            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.'));
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari price feed.'));
             return false;
         }
+
         const uniquePrices = new Set(prices.map(price => Number(price).toPrecision(12))).size;
         const minUniquePrices = safeNumber(obs.minUniquePrices, 1);
         if (uniquePrices < minUniquePrices) {
@@ -388,35 +422,20 @@ class EngineService {
         if (safeNumber(obs.rejectZeroMovement, false) && volatility === 0 && maxDropPercent === 0) return false;
         if (!flatObservation && volatility > ar.maxAllowedVolatility) return false;
 
-        Object.assign(token, {
-            volatility,
-            priceRange: maxDropPercent,
-            confirmedEntryPrice: endPrice,
-            observedStartPrice: startPrice,
-            observedMaxPrice: maxPrice,
-            observedMinPrice: minPrice,
-            uniquePrices,
-            flatObservation
-        });
+        Object.assign(token, { volatility, priceRange: maxDropPercent, confirmedEntryPrice: endPrice, observedStartPrice: startPrice, observedMaxPrice: maxPrice, observedMinPrice: minPrice, uniquePrices, flatObservation });
         console.log(chalk.green.bold('\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!'));
-        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End/Entry: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}% | Unique: ${uniquePrices} | Flat: ${flatObservation}`));
-        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per detik`));
+        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End/Entry: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}% | Unique: ${uniquePrices} | Ticks: ${prices.length} | Flat: ${flatObservation}`));
+        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per tick`));
         return true;
     }
 
     getPositionRiskProfile(token, volatility) {
         const flat = this.getAdaptiveRiskConfig().flatObservation || {};
         if (token.flatObservation && flat.enabled !== false) {
-            return {
-                trailingStopPercent: safeNumber(flat.trailingStopPercent, 1.5),
-                targetProfitPercent: safeNumber(flat.targetProfitPercent, 5),
-                stopLossPercent: safeNumber(flat.stopLossPercent, 4),
-                trailingStartPercent: safeNumber(flat.trailingStartPercent, 3),
-                timeLimitMinutes: safeNumber(flat.timeLimitMinutes, 4)
-            };
+            return { trailingStopPercent: safeNumber(flat.trailingStopPercent, 1.5), targetProfitPercent: safeNumber(flat.targetProfitPercent, 5), stopLossPercent: safeNumber(flat.stopLossPercent, 4), trailingStartPercent: safeNumber(flat.trailingStartPercent, 3), timeLimitMinutes: safeNumber(flat.timeLimitMinutes, 4) };
         }
-        let trailingStopPercent = volatility > 1 ? 8 : volatility >= 0.5 ? 5 : 2;
-        let targetProfitPercent = volatility > 1 ? 15 : volatility >= 0.5 ? 10 : 7;
+        const trailingStopPercent = volatility > 1 ? 8 : volatility >= 0.5 ? 5 : 2;
+        const targetProfitPercent = volatility > 1 ? 15 : volatility >= 0.5 ? 10 : 7;
         return { trailingStopPercent, targetProfitPercent, stopLossPercent: config.trading.stopLossPercent, trailingStartPercent: config.trading.trailingStartPercent, timeLimitMinutes: config.trading.timeLimitMinutes };
     }
 
@@ -479,34 +498,48 @@ class EngineService {
     }
 
     startMonitoring() {
-        console.log(chalk.blue(`Memulai monitoring via polling setiap 1 detik untuk ${this.currentPosition.symbol}...`));
-        this.fallbackToPolling();
+        if (this.isPolling) return;
+        console.log(chalk.blue(`Memulai monitoring non-overlap untuk ${this.currentPosition.symbol}...`));
+        this.isPolling = true;
+        this.pollPositionLoop();
     }
 
-    fallbackToPolling() {
-        if (this.checkInterval || !this.currentPosition) return;
-        console.log(chalk.yellow('Mengaktifkan polling setiap 1 detik...'));
-        this.checkInterval = setInterval(async () => {
+    async pollPositionLoop() {
+        const pm = this.getPriceMonitoringConfig();
+        while (this.isPolling && this.currentPosition) {
+            const startedAt = Date.now();
             try {
-                if (!this.currentPosition) return this.stopMonitoring();
-                const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress);
-                if (!currentPrice) return;
-                const pnl = ((currentPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-                if (currentPrice > this.currentPosition.maxPrice) {
-                    this.currentPosition.maxPrice = currentPrice;
-                    this.currentPosition.maxPriceUpdatedAt = new Date().toISOString();
-                    storage.saveActivePosition(this.currentPosition);
-                }
-                const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-                process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Flat ${this.currentPosition.flatObservation ? 'Y' : 'N'}    `));
-                this.checkExitConditions(currentPrice, pnl, maxPnl);
+                await this.checkPositionOnce(pm);
             } catch (error) {
                 console.error(chalk.red('\nError Monitoring:'), error.message);
             }
-        }, 1000);
+            const elapsed = Date.now() - startedAt;
+            const delay = Math.max(pm.minDelayMs, pm.activeIntervalMs - elapsed);
+            await sleep(delay);
+        }
+        this.isPolling = false;
+    }
+
+    async checkPositionOnce(pm = this.getPriceMonitoringConfig()) {
+        if (!this.currentPosition) return;
+        const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress, false, pm.timeoutMs);
+        if (!currentPrice) {
+            process.stdout.write(chalk.gray(`\rMonitoring ${this.currentPosition.symbol}: price tick missed    `));
+            return;
+        }
+        const pnl = ((currentPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
+        if (currentPrice > this.currentPosition.maxPrice) {
+            this.currentPosition.maxPrice = currentPrice;
+            this.currentPosition.maxPriceUpdatedAt = new Date().toISOString();
+            storage.saveActivePosition(this.currentPosition);
+        }
+        const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
+        process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Flat ${this.currentPosition.flatObservation ? 'Y' : 'N'}    `));
+        this.checkExitConditions(currentPrice, pnl, maxPnl);
     }
 
     stopMonitoring() {
+        this.isPolling = false;
         if (this.checkInterval) clearInterval(this.checkInterval);
         this.checkInterval = null;
     }
@@ -523,7 +556,6 @@ class EngineService {
         const earlyRules = flat ? (flat.earlyExitRules || ar.earlyExitRules) : ar.earlyExitRules;
         const minPnlAfterSeconds = flat ? safeNumber(flat.minPnlAfterSeconds, 60) : ar.minPnlAfterSeconds;
         const minPnlRequired = flat ? safeNumber(flat.minPnlRequired, 1) : ar.minPnlRequired;
-
         for (const tier of [...ar.profitLockTiers].sort((a, b) => safeNumber(b.maxPnl) - safeNumber(a.maxPnl))) {
             if (maxPnl >= safeNumber(tier.maxPnl) && pnl < safeNumber(tier.lockPnl)) return `🔒 Tiered Profit Lock: Max ${maxPnl.toFixed(2)}%, turun di bawah ${tier.lockPnl}%`;
         }
