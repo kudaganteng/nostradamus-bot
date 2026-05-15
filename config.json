@@ -8,6 +8,14 @@
     "trailingStopPercent": 3,
     "timeLimitMinutes": 10
   },
+  "priceMonitoring": {
+    "source": "dexscreener",
+    "activeIntervalMs": 750,
+    "observationIntervalMs": 750,
+    "timeoutMs": 800,
+    "minDelayMs": 150,
+    "validateOnChainOnce": true
+  },
   "paperExecution": {
     "enabled": true,
     "dynamicSlippage": true,
