@@ -101,11 +101,13 @@ const Storage = {
         writeJson(TRADES_FILE, trades);
 
         const portfolio = this.getPortfolio();
-        const profitInSol = (trade.pnl / 100) * trade.positionSize;
+        const profitInSol = Number.isFinite(Number(trade.netPnlSol))
+            ? Number(trade.netPnlSol)
+            : (Number(trade.pnl) / 100) * Number(trade.positionSize);
 
         portfolio.currentBalance += profitInSol;
         portfolio.tradeCount += 1;
-        if (trade.pnl > 0) portfolio.winCount += 1;
+        if (profitInSol > 0) portfolio.winCount += 1;
         else portfolio.lossCount += 1;
 
         if (portfolio.currentBalance > portfolio.peakBalance) {
