@@ -8,11 +8,22 @@ const activityLogger = require('../utils/activityLogger');
 const { Connection, PublicKey } = require('@solana/web3.js');
 require('dotenv').config();
 
+function getAlchemyRpcUrl() {
+    const url = process.env.ALCHEMY_RPC_URL;
+
+    if (!url || !url.trim()) {
+        throw new Error('ALCHEMY_RPC_URL belum diisi. Tambahkan ALCHEMY_RPC_URL ke file .env.');
+    }
+
+    return url.trim();
+}
+
 class EngineService {
     constructor() {
         // Inisialisasi storage saat engine dinyalakan
         storage.init();
-        this.connection = new Connection(process.env.ALCHEMY_RPC_URL, 'confirmed');
+        this.alchemyRpcUrl = getAlchemyRpcUrl();
+        this.connection = new Connection(this.alchemyRpcUrl, 'confirmed');
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
         this.hasRecovered = false; // Flag untuk mencegah recovery berulang
@@ -82,7 +93,7 @@ class EngineService {
         try {
             console.log(chalk.cyan(`\\n[Monopoly Check] 🔍 Menganalisis distribusi wallet untuk ${tokenAddress}...`));
             
-            const response = await axios.post(config.rpc.alchemyUrl, {
+            const response = await axios.post(this.alchemyRpcUrl, {
                 jsonrpc: "2.0",
                 id: 1,
                 method: "getTokenLargestAccounts",
