@@ -116,6 +116,7 @@ class EngineService {
             flatObservation: ar.flatObservation || {},
             profitLockTiers: Array.isArray(ar.profitLockTiers) ? ar.profitLockTiers : [],
             earlyExitRules: Array.isArray(ar.earlyExitRules) ? ar.earlyExitRules : [],
+            earlyExitMaxPnlThreshold: safeNumber(ar.earlyExitMaxPnlThreshold, 1),
             minPnlAfterSeconds: safeNumber(ar.minPnlAfterSeconds, 90),
             minPnlRequired: safeNumber(ar.minPnlRequired, 2),
             stagnationRules: Array.isArray(ar.stagnationRules) ? ar.stagnationRules : [],
@@ -270,107 +271,36 @@ class EngineService {
     }
 
     async getJupiterSellPrice(position, timeoutMs = null) {
-        const markMiss = (reason, extra = {}) => {
-            if (position) {
-                position.lastJupiterMissAt = new Date().toISOString();
-                position.lastJupiterMissReason = reason;
-                position.lastJupiterMissExtra = extra;
-            }
-
-            activityLogger.log('JUPITER_QUOTE_MISS', {
-                symbol: position?.symbol,
-                address: position?.address,
-                reason,
-                ...extra
-            });
-
-            return null;
-        };
-
         try {
             const pm = this.getPriceMonitoringConfig();
             const tokenUnits = safeNumber(position?.receivedTokenUnits, 0);
-
-            if (!position?.address) {
-                return markMiss('missing_position_address');
-            }
-
-            if (tokenUnits <= 0) {
-                return markMiss('missing_or_zero_received_token_units', {
-                    receivedTokenUnits: position?.receivedTokenUnits
-                });
-            }
-
+            if (!position?.address || tokenUnits <= 0) return null;
             const decimals = await this.getTokenDecimals(position.address);
             const amount = Math.floor(tokenUnits * Math.pow(10, decimals));
-
-            if (!Number.isFinite(amount) || amount <= 0) {
-                return markMiss('invalid_quote_amount', {
-                    tokenUnits,
-                    decimals,
-                    amount
-                });
-            }
-
-            const params = {
-                inputMint: position.address,
-                outputMint: SOL_MINT,
-                amount: String(amount),
-                slippageBps: String(pm.jupiterSlippageBps),
-                onlyDirectRoutes: String(pm.jupiterOnlyDirectRoutes)
-            };
-
+            if (!Number.isFinite(amount) || amount <= 0) return null;
             const response = await axios.get(pm.jupiterQuoteUrl, {
-                params,
+                params: {
+                    inputMint: position.address,
+                    outputMint: SOL_MINT,
+                    amount: String(amount),
+                    slippageBps: String(pm.jupiterSlippageBps),
+                    onlyDirectRoutes: String(pm.jupiterOnlyDirectRoutes)
+                },
                 headers: this.getJupiterHeaders(),
                 timeout: timeoutMs || pm.timeoutMs
             });
-
             const outAmountLamports = safeNumber(response.data?.outAmount, 0);
-
-            if (outAmountLamports <= 0) {
-                return markMiss('missing_or_zero_out_amount', {
-                    responseData: response.data
-                });
-            }
-
+            if (outAmountLamports <= 0) return null;
             const outSol = outAmountLamports / Math.pow(10, SOL_DECIMALS);
             const tokenPriceUsd = (outSol / tokenUnits) * pm.assumedSolUsd;
-
-            if (!Number.isFinite(tokenPriceUsd) || tokenPriceUsd <= 0) {
-                return markMiss('invalid_calculated_jupiter_price', {
-                    outSol,
-                    tokenUnits,
-                    assumedSolUsd: pm.assumedSolUsd,
-                    tokenPriceUsd
-                });
-            }
-
+            if (!Number.isFinite(tokenPriceUsd) || tokenPriceUsd <= 0) return null;
             position.lastJupiterQuoteAt = new Date().toISOString();
             position.lastJupiterOutSol = outSol;
             position.lastJupiterPriceUsd = tokenPriceUsd;
             position.lastJupiterPriceImpactPct = response.data?.priceImpactPct;
-            position.lastJupiterMissReason = null;
-            position.lastJupiterMissExtra = null;
-
             return tokenPriceUsd;
         } catch (error) {
-            const errorMessage = error.response?.data?.error || error.response?.data || error.message;
-
-            activityLogger.log('JUPITER_QUOTE_ERROR', {
-                symbol: position?.symbol,
-                address: position?.address,
-                error: errorMessage
-            });
-
-            if (position) {
-                position.lastJupiterMissAt = new Date().toISOString();
-                position.lastJupiterMissReason = 'jupiter_request_error';
-                position.lastJupiterMissExtra = {
-                    error: errorMessage
-                };
-            }
-
+            activityLogger.log('JUPITER_QUOTE_ERROR', { symbol: position?.symbol, address: position?.address, error: error.response?.data?.error || error.message });
             return null;
         }
     }
@@ -401,35 +331,11 @@ class EngineService {
 
     async getActivePositionPrice(timeoutMs = null) {
         const pm = this.getPriceMonitoringConfig();
-
         if (pm.source === 'jupiter') {
             const jupiterPrice = await this.getJupiterSellPrice(this.currentPosition, timeoutMs);
-
-            if (jupiterPrice) {
-                return { price: jupiterPrice, source: 'jupiter' };
-            }
-
-            const reason = this.currentPosition?.lastJupiterMissReason || 'unknown_jupiter_miss';
-
-            console.log(chalk.yellow(
-                `\n[JUPITER MISS] ${this.currentPosition?.symbol || 'UNKNOWN'}: ${reason}. ` +
-                `Fallback DexScreener: ${pm.fallbackToDexScreener ? 'ON' : 'OFF'}`
-            ));
-
-            activityLogger.log('JUPITER_FALLBACK_DECISION', {
-                symbol: this.currentPosition?.symbol,
-                address: this.currentPosition?.address,
-                reason,
-                fallbackToDexScreener: pm.fallbackToDexScreener
-            });
-
-            storage.saveActivePosition(this.currentPosition);
-
-            if (!pm.fallbackToDexScreener) {
-                return { price: null, source: 'jupiter_miss' };
-            }
+            if (jupiterPrice) return { price: jupiterPrice, source: 'jupiter' };
+            if (!pm.fallbackToDexScreener) return { price: null, source: 'jupiter_miss' };
         }
-
         const dexPrice = await this.getDexScreenerPrice(this.currentPosition.pairAddress, false, timeoutMs);
         return { price: dexPrice, source: dexPrice ? 'dexscreener' : 'dex_miss' };
     }
@@ -439,30 +345,19 @@ class EngineService {
             console.log(chalk.cyan(`\\n[Monopoly Check] 🔍 Menganalisis distribusi wallet untuk ${tokenAddress}...`));
             const response = await axios.post(this.alchemyRpcUrl, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [tokenAddress] }, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
             const largestAccounts = response.data?.result?.value;
-            if (!largestAccounts) {
-                console.log(chalk.yellow('[Monopoly Check] ⚠️ Gagal mendapatkan data wallet terbesar.'));
-                return false;
-            }
+            if (!largestAccounts) return false;
             const topHolders = largestAccounts.slice(0, 10);
             let totalSupply = 0;
             let topHolderAmount = 0;
-            topHolders.forEach((account, index) => {
-                const amount = parseFloat(account.amount);
-                totalSupply += amount;
-                if (index === 0) topHolderAmount = amount;
-            });
+            topHolders.forEach((account, index) => { const amount = parseFloat(account.amount); totalSupply += amount; if (index === 0) topHolderAmount = amount; });
             const monopolyPercent = totalSupply > 0 ? (topHolderAmount / totalSupply) * 100 : 0;
-            console.log(chalk.gray(`   Top 10 holders: ${totalSupply.toFixed(0)} tokens`));
             console.log(chalk.gray(`   Wallet #1 memegang: ${topHolderAmount.toFixed(0)} tokens (${monopolyPercent.toFixed(2)}%)`));
             if (monopolyPercent > 70) {
-                console.log(chalk.red.bold(`   ⚠️ WARNING: Wallet terbesar mengontrol ${monopolyPercent.toFixed(2)}% supply!`));
                 activityLogger.log('MONOPOLY_DETECTED', { token: tokenAddress, monopolyPercent: monopolyPercent.toFixed(2) });
                 return true;
             }
-            console.log(chalk.green(`   ✅ Distribusi wallet sehat (${monopolyPercent.toFixed(2)}%)`));
             return false;
         } catch (error) {
-            console.log(chalk.yellow(`[Monopoly Check] ⚠️ Error mengecek wallet: ${error.message}`));
             activityLogger.log('MONOPOLY_CHECK_ERROR', { token: tokenAddress, error: error.message });
             return false;
         }
@@ -470,30 +365,19 @@ class EngineService {
 
     async checkWashTrading(tokenAddress, pairAddress) {
         try {
-            console.log(chalk.cyan(`\\n[Wash Trading Check] 🔍 Menganalisis aktivitas trading untuk ${tokenAddress}...`));
             const response = await axios.get(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${pairAddress}`, { headers: { Accept: 'application/json' }, timeout: 8000 });
             const attributes = response.data?.data?.attributes;
-            if (!attributes) {
-                console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data pool dari Gecko Terminal.'));
-                return false;
-            }
+            if (!attributes) return false;
             const totalBuyTransactions = attributes.txns?.m5?.buys || attributes.transactions_5m || 0;
             const totalVolumeUsd = parseFloat(attributes.volume_usd || 0) || 0;
             const uniqueBuyersCount = attributes.unique_buyers_m5 || attributes.unique_traders_m5 || 0;
             const avgTransactionValue = totalBuyTransactions > 0 ? totalVolumeUsd / totalBuyTransactions : 0;
             const transactionsPerBuyer = uniqueBuyersCount > 0 ? totalBuyTransactions / uniqueBuyersCount : 0;
-            console.log(chalk.gray(`   Total Transaksi Beli (5m): ${totalBuyTransactions}`));
-            console.log(chalk.gray(`   Unique Buyers (5m): ${uniqueBuyersCount}`));
-            console.log(chalk.gray(`   Total Volume: $${totalVolumeUsd.toFixed(2)}`));
-            console.log(chalk.gray(`   Rata-rata per Transaksi: $${avgTransactionValue.toFixed(2)}`));
-            console.log(chalk.gray(`   Transaksi per Buyer: ${transactionsPerBuyer.toFixed(1)}`));
             if (avgTransactionValue < 2 && totalBuyTransactions > 5) return true;
             if (transactionsPerBuyer > 20 && totalBuyTransactions > 10) return true;
             if (uniqueBuyersCount / totalBuyTransactions < 0.1 && totalBuyTransactions > 10) return true;
-            console.log(chalk.green(`   ✅ Aktivitas trading terlihat natural (${uniqueBuyersCount} unique buyers, avg $${avgTransactionValue.toFixed(2)}/tx)`));
             return false;
         } catch (error) {
-            console.log(chalk.yellow(`[Wash Trading Check] ⚠️ Error mengecek wash trading: ${error.message}`));
             activityLogger.log('WASH_TRADING_CHECK_ERROR', { token: tokenAddress, error: error.message });
             return false;
         }
@@ -523,12 +407,7 @@ class EngineService {
         if (!address || !tokenState) return { skip: false };
         if (tokenState.blacklisted) return { skip: true, reason: 'Token sudah blacklisted di botState.' };
         if (tokenState.cooldownUntil && Date.now() < tokenState.cooldownUntil) return { skip: true, reason: 'Token masih cooldown.' };
-        if (safeNumber(tokenState.slCount, 0) >= ar.sessionBlacklistStopLossCount) {
-            tokenState.blacklisted = true;
-            state.tokenStats[address] = tokenState;
-            storage.saveState(state);
-            return { skip: true, reason: `Token mencapai ${ar.sessionBlacklistStopLossCount} stop loss dalam sesi ini.` };
-        }
+        if (safeNumber(tokenState.slCount, 0) >= ar.sessionBlacklistStopLossCount) return { skip: true, reason: `Token mencapai ${ar.sessionBlacklistStopLossCount} stop loss dalam sesi ini.` };
         const history = this.getTokenHistoryScore(address);
         if (history.lastNNegative) return { skip: true, reason: 'Tiga trade terakhir token ini negatif.' };
         if (history.score < ar.minTokenScore) return { skip: true, reason: `Token score terlalu rendah (${history.score}).` };
@@ -541,15 +420,10 @@ class EngineService {
         const ar = this.getAdaptiveRiskConfig();
         const pm = this.getPriceMonitoringConfig();
         console.log(chalk.cyan(`\n[Observer] 🕵️ Menunda Entry. Mengawasi ${token.baseToken.symbol} selama ${obs.durationSeconds} detik...`));
-
         if (pm.validateOnChainOnce) {
             const isValid = await this.validateTokenOnChain(token.baseToken.address);
-            if (!isValid) {
-                console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Token account tidak valid on-chain.'));
-                return false;
-            }
+            if (!isValid) return false;
         }
-
         const prices = [];
         const startedAt = Date.now();
         const durationMs = safeNumber(obs.durationSeconds, 10) * 1000;
@@ -559,26 +433,15 @@ class EngineService {
             process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length} tick...\r`));
             await sleep(pm.observationIntervalMs);
         }
-
-        if (prices.length < 3) {
-            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari price feed.'));
-            return false;
-        }
-
+        if (prices.length < 3) return false;
         const uniquePrices = new Set(prices.map(price => Number(price).toPrecision(12))).size;
-        const minUniquePrices = safeNumber(obs.minUniquePrices, 1);
-        if (uniquePrices < minUniquePrices) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Variasi harga terlalu sedikit (${uniquePrices}/${minUniquePrices}).`));
-            return false;
-        }
+        if (uniquePrices < safeNumber(obs.minUniquePrices, 1)) return false;
         const flatObservation = this.isFlatObservation(uniquePrices);
         if (flatObservation) console.log(chalk.yellow('\n[Observer] ⚠️ Harga sangat flat. Entry tetap diizinkan, tetapi TP/SL akan diperketat.'));
-
         const isMonopolized = await this.checkWalletMonopoly(token.baseToken.address);
         if (isMonopolized) return false;
         const isWashTrading = await this.checkWashTrading(token.baseToken.address, token.pairAddress);
         if (isWashTrading) return false;
-
         const startPrice = prices[0];
         const endPrice = prices[prices.length - 1];
         const minPrice = Math.min(...prices);
@@ -586,11 +449,7 @@ class EngineService {
         const trendPercent = ((endPrice - startPrice) / startPrice) * 100;
         if (trendPercent < -3) return false;
         const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
-        const maxAllowedDrop = safeNumber(obs.maxDumpPercent, 22);
-        if (maxDropPercent > maxAllowedDrop) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas terlalu tinggi (${maxDropPercent.toFixed(2)}% > ${maxAllowedDrop}%).`));
-            return false;
-        }
+        if (maxDropPercent > safeNumber(obs.maxDumpPercent, 22)) return false;
         const fromPeakPercent = ((maxPrice - endPrice) / maxPrice) * 100;
         if (fromPeakPercent > safeNumber(obs.maxFromPeakPercent, 10)) return false;
         const priceChanges = [];
@@ -598,13 +457,10 @@ class EngineService {
         const meanChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
         const variance = priceChanges.reduce((a, b) => a + Math.pow(b - meanChange, 2), 0) / priceChanges.length;
         const volatility = Math.sqrt(variance);
-        if (safeNumber(obs.rejectZeroMovement, false) && volatility === 0 && maxDropPercent === 0) return false;
         if (!flatObservation && volatility > ar.maxAllowedVolatility) return false;
-
         Object.assign(token, { volatility, priceRange: maxDropPercent, confirmedEntryPrice: endPrice, observedStartPrice: startPrice, observedMaxPrice: maxPrice, observedMinPrice: minPrice, uniquePrices, flatObservation });
         console.log(chalk.green.bold('\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!'));
-        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End/Entry: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}% | Unique: ${uniquePrices} | Ticks: ${prices.length} | Flat: ${flatObservation}`));
-        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per tick`));
+        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End/Entry: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}% | Unique: ${uniquePrices} | Flat: ${flatObservation}`));
         return true;
     }
 
@@ -613,9 +469,7 @@ class EngineService {
         if (token.flatObservation && flat.enabled !== false) {
             return { trailingStopPercent: safeNumber(flat.trailingStopPercent, 1.5), targetProfitPercent: safeNumber(flat.targetProfitPercent, 5), stopLossPercent: safeNumber(flat.stopLossPercent, 4), trailingStartPercent: safeNumber(flat.trailingStartPercent, 3), timeLimitMinutes: safeNumber(flat.timeLimitMinutes, 4) };
         }
-        const trailingStopPercent = volatility > 1 ? 8 : volatility >= 0.5 ? 5 : 2;
-        const targetProfitPercent = volatility > 1 ? 15 : volatility >= 0.5 ? 10 : 7;
-        return { trailingStopPercent, targetProfitPercent, stopLossPercent: config.trading.stopLossPercent, trailingStartPercent: config.trading.trailingStartPercent, timeLimitMinutes: config.trading.timeLimitMinutes };
+        return { trailingStopPercent: volatility > 1 ? 8 : volatility >= 0.5 ? 5 : 2, targetProfitPercent: volatility > 1 ? 15 : volatility >= 0.5 ? 10 : 7, stopLossPercent: config.trading.stopLossPercent, trailingStartPercent: config.trading.trailingStartPercent, timeLimitMinutes: config.trading.timeLimitMinutes };
     }
 
     async openPosition(token) {
@@ -623,22 +477,14 @@ class EngineService {
         const historyGuard = this.shouldSkipTokenByHistory(token);
         if (historyGuard.skip) {
             console.log(chalk.yellow(`[ENTRY SKIPPED] ${token.baseToken.symbol}: ${historyGuard.reason}`));
-            activityLogger.log('ENTRY_SKIPPED_HISTORY', { symbol: token.baseToken.symbol, address: token.baseToken.address, reason: historyGuard.reason });
             return;
         }
         const quotedPrice = Number(token.confirmedEntryPrice);
         if (!Number.isFinite(quotedPrice) || quotedPrice <= 0) return;
         const positionSize = Number(config.trading.positionSize);
         const buyExecution = this.simulateBuyExecution(quotedPrice, positionSize, token);
-        if (!buyExecution.ok) {
-            console.log(chalk.red.bold(`\n[BUY FAILED] ${token.baseToken.symbol}: ${buyExecution.failureReason}`));
-            activityLogger.log('PAPER_BUY_FAILED', { symbol: token.baseToken.symbol, address: token.baseToken.address, pairAddress: token.pairAddress, ...buyExecution });
-            await telegram.sendMessage(`🔴 *PAPER BUY FAILED*\nToken: ${token.baseToken.symbol}\nReason: ${buyExecution.failureReason}\nFee Lost: ${buyExecution.feeSol.toFixed(6)} SOL`);
-            return;
-        }
-        const volatility = token.volatility || 0;
-        const riskProfile = this.getPositionRiskProfile(token, volatility);
-        const liquidityUsd = Number(token.liquidity?.usd || 0);
+        if (!buyExecution.ok) return;
+        const riskProfile = this.getPositionRiskProfile(token, token.volatility || 0);
         this.currentPosition = {
             symbol: token.baseToken.symbol,
             address: token.baseToken.address,
@@ -655,7 +501,7 @@ class EngineService {
             buyFailureChance: buyExecution.failureChance,
             dexFeeBps: buyExecution.dexFeeBps,
             failedSellAttempts: 0,
-            liquidityUsd,
+            liquidityUsd: Number(token.liquidity?.usd || 0),
             priceRange: token.priceRange,
             observedStartPrice: token.observedStartPrice,
             observedMaxPrice: token.observedMaxPrice,
@@ -667,11 +513,10 @@ class EngineService {
             dynamicStopLossPercent: riskProfile.stopLossPercent,
             dynamicTrailingStartPercent: riskProfile.trailingStartPercent,
             dynamicTimeLimitMinutes: riskProfile.timeLimitMinutes,
-            volatility
+            volatility: token.volatility || 0
         };
         storage.saveActivePosition(this.currentPosition);
         console.log(chalk.green.bold(`\n[BUY] Mengunci target: ${this.currentPosition.symbol}`));
-        console.log(chalk.gray(`Executed Entry: $${this.currentPosition.entryPrice} | TP: ${riskProfile.targetProfitPercent}% | SL: ${riskProfile.stopLossPercent}% | Flat: ${!!token.flatObservation}`));
         await telegram.notifyTrade('BUY', { symbol: this.currentPosition.symbol, price: this.currentPosition.entryPrice, quotedPrice, address: this.currentPosition.address, feeSol: buyExecution.feeSol, slippageBps: buyExecution.slippageBps });
         this.startMonitoring();
     }
@@ -687,14 +532,9 @@ class EngineService {
         const pm = this.getPriceMonitoringConfig();
         while (this.isPolling && this.currentPosition) {
             const startedAt = Date.now();
-            try {
-                await this.checkPositionOnce(pm);
-            } catch (error) {
-                console.error(chalk.red('\nError Monitoring:'), error.message);
-            }
+            try { await this.checkPositionOnce(pm); } catch (error) { console.error(chalk.red('\nError Monitoring:'), error.message); }
             const elapsed = Date.now() - startedAt;
-            const delay = Math.max(pm.minDelayMs, pm.activeIntervalMs - elapsed);
-            await sleep(delay);
+            await sleep(Math.max(pm.minDelayMs, pm.activeIntervalMs - elapsed));
         }
         this.isPolling = false;
     }
@@ -736,11 +576,14 @@ class EngineService {
         const earlyRules = flat ? (flat.earlyExitRules || ar.earlyExitRules) : ar.earlyExitRules;
         const minPnlAfterSeconds = flat ? safeNumber(flat.minPnlAfterSeconds, 60) : ar.minPnlAfterSeconds;
         const minPnlRequired = flat ? safeNumber(flat.minPnlRequired, 1) : ar.minPnlRequired;
+        const earlyExitMaxPnlThreshold = flat ? safeNumber(flat.earlyExitMaxPnlThreshold, ar.earlyExitMaxPnlThreshold) : ar.earlyExitMaxPnlThreshold;
         for (const tier of [...ar.profitLockTiers].sort((a, b) => safeNumber(b.maxPnl) - safeNumber(a.maxPnl))) {
             if (maxPnl >= safeNumber(tier.maxPnl) && pnl < safeNumber(tier.lockPnl)) return `🔒 Tiered Profit Lock: Max ${maxPnl.toFixed(2)}%, turun di bawah ${tier.lockPnl}%`;
         }
         for (const rule of earlyRules) {
-            if (elapsedSeconds <= safeNumber(rule.seconds) && pnl <= safeNumber(rule.maxLossPercent, -999)) return `⚡ Early Exit: ${elapsedSeconds.toFixed(0)}s PNL ${pnl.toFixed(2)}%`;
+            if (maxPnl < earlyExitMaxPnlThreshold && elapsedSeconds <= safeNumber(rule.seconds) && pnl <= safeNumber(rule.maxLossPercent, -999)) {
+                return `⚡ Early Exit: ${elapsedSeconds.toFixed(0)}s PNL ${pnl.toFixed(2)}%, Max PNL belum ${earlyExitMaxPnlThreshold}%`;
+            }
         }
         if (elapsedSeconds >= minPnlAfterSeconds && maxPnl < minPnlRequired) return `⏱️ Weakness Exit: ${elapsedSeconds.toFixed(0)}s Max PNL belum ${minPnlRequired}%`;
         for (const rule of ar.stagnationRules) {
