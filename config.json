@@ -11,6 +11,10 @@
   "paperExecution": {
     "enabled": true,
     "dynamicSlippage": true,
+    "buySlippageBps": 80,
+    "sellSlippageBps": 120,
+    "buyFailureChance": 0.03,
+    "sellFailureChance": 0.05,
     "baseBuySlippageBps": 40,
     "baseSellSlippageBps": 70,
     "minBuySlippageBps": 25,
