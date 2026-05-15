@@ -24,6 +24,12 @@ function clampProbability(value, fallback = 0) {
     return Math.min(Math.max(n, 0), 1);
 }
 
+function clampNumber(value, min, max, fallback = min) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(Math.max(n, min), max);
+}
+
 function bpsToMultiplier(bps) {
     return Number(bps || 0) / 10000;
 }
@@ -48,17 +54,37 @@ class EngineService {
     }
 
     getPaperExecutionConfig() {
+        const pe = config.paperExecution || {};
+
         return {
-            enabled: config.paperExecution?.enabled !== false,
-            buySlippageBps: Number(config.paperExecution?.buySlippageBps || 0),
-            sellSlippageBps: Number(config.paperExecution?.sellSlippageBps || 0),
-            dexFeeBps: Number(config.paperExecution?.dexFeeBps || 0),
-            networkFeeSol: Number(config.paperExecution?.networkFeeSol || 0),
-            priorityFeeSol: Number(config.paperExecution?.priorityFeeSol || 0),
-            buyFailureChance: clampProbability(config.paperExecution?.buyFailureChance, 0),
-            sellFailureChance: clampProbability(config.paperExecution?.sellFailureChance, 0),
-            maxSellFailureRetries: Math.max(0, Number(config.paperExecution?.maxSellFailureRetries || 0)),
-            sellRetryPenaltyBps: Number(config.paperExecution?.sellRetryPenaltyBps || 0)
+            enabled: pe.enabled !== false,
+            dynamicSlippage: pe.dynamicSlippage !== false,
+            buySlippageBps: Number(pe.buySlippageBps || 0),
+            sellSlippageBps: Number(pe.sellSlippageBps || 0),
+            baseBuySlippageBps: Number(pe.baseBuySlippageBps ?? pe.buySlippageBps ?? 40),
+            baseSellSlippageBps: Number(pe.baseSellSlippageBps ?? pe.sellSlippageBps ?? 70),
+            minBuySlippageBps: Number(pe.minBuySlippageBps ?? 25),
+            maxBuySlippageBps: Number(pe.maxBuySlippageBps ?? 350),
+            minSellSlippageBps: Number(pe.minSellSlippageBps ?? 40),
+            maxSellSlippageBps: Number(pe.maxSellSlippageBps ?? 650),
+            volatilitySlippageMultiplier: Number(pe.volatilitySlippageMultiplier ?? 55),
+            priceRangeSlippageMultiplier: Number(pe.priceRangeSlippageMultiplier ?? 8),
+            lowLiquidityThresholdUsd: Number(pe.lowLiquidityThresholdUsd ?? 10000),
+            lowLiquiditySlippageBps: Number(pe.lowLiquiditySlippageBps ?? 140),
+            sizeImpactMultiplier: Number(pe.sizeImpactMultiplier ?? 120),
+            randomJitterBps: Number(pe.randomJitterBps ?? 35),
+            dexFeeBps: Number(pe.dexFeeBps || 0),
+            networkFeeSol: Number(pe.networkFeeSol || 0),
+            priorityFeeSol: Number(pe.priorityFeeSol || 0),
+            buyFailureChance: clampProbability(pe.buyFailureChance, 0.03),
+            sellFailureChance: clampProbability(pe.sellFailureChance, 0.05),
+            baseBuyFailureChance: clampProbability(pe.baseBuyFailureChance, clampProbability(pe.buyFailureChance, 0.03)),
+            baseSellFailureChance: clampProbability(pe.baseSellFailureChance, clampProbability(pe.sellFailureChance, 0.05)),
+            failureChancePer100BpsSlippage: Number(pe.failureChancePer100BpsSlippage ?? 0.01),
+            maxBuyFailureChance: clampProbability(pe.maxBuyFailureChance, 0.12),
+            maxSellFailureChance: clampProbability(pe.maxSellFailureChance, 0.22),
+            maxSellFailureRetries: Math.max(0, Number(pe.maxSellFailureRetries || 0)),
+            sellRetryPenaltyBps: Number(pe.sellRetryPenaltyBps || 0)
         };
     }
 
@@ -66,7 +92,96 @@ class EngineService {
         return Math.random() < chance;
     }
 
-    simulateBuyExecution(quotedPrice, positionSizeSol) {
+    calculateDynamicSlippage(side, marketContext = {}) {
+        const exec = this.getPaperExecutionConfig();
+        const isBuy = side === 'buy';
+        const base = isBuy ? exec.baseBuySlippageBps : exec.baseSellSlippageBps;
+        const legacyFallback = isBuy ? exec.buySlippageBps : exec.sellSlippageBps;
+        const min = isBuy ? exec.minBuySlippageBps : exec.minSellSlippageBps;
+        const max = isBuy ? exec.maxBuySlippageBps : exec.maxSellSlippageBps;
+
+        if (!exec.dynamicSlippage) {
+            const fixed = legacyFallback || base;
+            return {
+                slippageBps: clampNumber(fixed, min, max, fixed),
+                breakdown: {
+                    mode: 'fixed',
+                    baseBps: fixed,
+                    volatilityBps: 0,
+                    priceRangeBps: 0,
+                    liquidityBps: 0,
+                    sizeImpactBps: 0,
+                    jitterBps: 0,
+                    retryPenaltyBps: 0
+                }
+            };
+        }
+
+        const volatility = Math.max(0, Number(marketContext.volatility || 0));
+        const priceRange = Math.max(0, Number(marketContext.priceRange || 0));
+        const liquidityUsd = Math.max(0, Number(marketContext.liquidityUsd || 0));
+        const positionSizeSol = Math.max(0, Number(marketContext.positionSizeSol || config.trading.positionSize || 0));
+        const failedSellAttempts = Math.max(0, Number(marketContext.failedSellAttempts || 0));
+
+        const volatilityBps = volatility * exec.volatilitySlippageMultiplier;
+        const priceRangeBps = priceRange * exec.priceRangeSlippageMultiplier;
+
+        let liquidityBps = 0;
+        if (liquidityUsd > 0 && liquidityUsd < exec.lowLiquidityThresholdUsd) {
+            const liquidityRatio = 1 - (liquidityUsd / exec.lowLiquidityThresholdUsd);
+            liquidityBps = liquidityRatio * exec.lowLiquiditySlippageBps;
+        }
+
+        // Approximate size impact. SOL is roughly converted to USD with a conservative static value.
+        // This is only a paper-trade stress model, not a live route simulator.
+        const assumedSolUsd = 150;
+        const positionUsd = positionSizeSol * assumedSolUsd;
+        const sizeImpactBps = liquidityUsd > 0
+            ? (positionUsd / liquidityUsd) * exec.sizeImpactMultiplier * 100
+            : exec.sizeImpactMultiplier;
+
+        const jitterRange = Math.max(0, exec.randomJitterBps);
+        const jitterBps = Math.random() * jitterRange;
+        const retryPenaltyBps = isBuy ? 0 : failedSellAttempts * exec.sellRetryPenaltyBps;
+        const sellPenaltyMultiplier = isBuy ? 1 : 1.25;
+
+        const rawSlippageBps = base
+            + (volatilityBps * sellPenaltyMultiplier)
+            + (priceRangeBps * sellPenaltyMultiplier)
+            + liquidityBps
+            + sizeImpactBps
+            + jitterBps
+            + retryPenaltyBps;
+
+        const slippageBps = clampNumber(rawSlippageBps, min, max, base);
+
+        return {
+            slippageBps,
+            breakdown: {
+                mode: 'dynamic',
+                baseBps: base,
+                volatilityBps,
+                priceRangeBps,
+                liquidityBps,
+                sizeImpactBps,
+                jitterBps,
+                retryPenaltyBps,
+                liquidityUsd,
+                positionSizeSol,
+                failedSellAttempts
+            }
+        };
+    }
+
+    calculateDynamicFailureChance(side, slippageBps) {
+        const exec = this.getPaperExecutionConfig();
+        const baseChance = side === 'buy' ? exec.baseBuyFailureChance : exec.baseSellFailureChance;
+        const maxChance = side === 'buy' ? exec.maxBuyFailureChance : exec.maxSellFailureChance;
+        const extraChance = (Math.max(0, slippageBps) / 100) * exec.failureChancePer100BpsSlippage;
+        return clampProbability(baseChance + extraChance, baseChance > 0 ? baseChance : 0);
+    }
+
+    simulateBuyExecution(quotedPrice, positionSizeSol, token = {}) {
         const exec = this.getPaperExecutionConfig();
 
         if (!exec.enabled) {
@@ -76,6 +191,8 @@ class EngineService {
                 executionPrice: quotedPrice,
                 feeSol: 0,
                 slippageBps: 0,
+                slippageBreakdown: null,
+                failureChance: 0,
                 dexFeeBps: 0,
                 receivedTokenUnits: positionSizeSol / quotedPrice,
                 spentSol: positionSizeSol,
@@ -83,13 +200,26 @@ class EngineService {
             };
         }
 
-        if (this.shouldSimulateFailure(exec.buyFailureChance)) {
+        const liquidityUsd = Number(token.liquidity?.usd || token.liquidityUsd || 0);
+        const slippage = this.calculateDynamicSlippage('buy', {
+            volatility: token.volatility,
+            priceRange: token.priceRange,
+            liquidityUsd,
+            positionSizeSol
+        });
+        const failureChance = exec.dynamicSlippage
+            ? this.calculateDynamicFailureChance('buy', slippage.slippageBps)
+            : exec.buyFailureChance;
+
+        if (this.shouldSimulateFailure(failureChance)) {
             return {
                 ok: false,
                 quotedPrice,
                 executionPrice: null,
                 feeSol: exec.networkFeeSol,
-                slippageBps: exec.buySlippageBps,
+                slippageBps: slippage.slippageBps,
+                slippageBreakdown: slippage.breakdown,
+                failureChance,
                 dexFeeBps: exec.dexFeeBps,
                 receivedTokenUnits: 0,
                 spentSol: exec.networkFeeSol,
@@ -99,15 +229,17 @@ class EngineService {
 
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
         const effectiveSpendSol = Math.max(positionSizeSol - feeSol, 0);
-        const executionPrice = quotedPrice * (1 + bpsToMultiplier(exec.buySlippageBps + exec.dexFeeBps));
-        const receivedTokenUnits = effectiveSpendSol / executionPrice;
+        const executionPrice = quotedPrice * (1 + bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps));
+        const receivedTokenUnits = executionPrice > 0 ? effectiveSpendSol / executionPrice : 0;
 
         return {
             ok: true,
             quotedPrice,
             executionPrice,
             feeSol,
-            slippageBps: exec.buySlippageBps,
+            slippageBps: slippage.slippageBps,
+            slippageBreakdown: slippage.breakdown,
+            failureChance,
             dexFeeBps: exec.dexFeeBps,
             receivedTokenUnits,
             spentSol: positionSizeSol,
@@ -118,7 +250,6 @@ class EngineService {
     simulateSellExecution(quotedPrice, position, reason) {
         const exec = this.getPaperExecutionConfig();
         const failedSellAttempts = Number(position.failedSellAttempts || 0);
-        const totalSlippageBps = exec.sellSlippageBps + (failedSellAttempts * exec.sellRetryPenaltyBps);
 
         if (!exec.enabled) {
             const grossReturnSol = position.receivedTokenUnits
@@ -132,6 +263,8 @@ class EngineService {
                 executionPrice: quotedPrice,
                 feeSol: 0,
                 slippageBps: 0,
+                slippageBreakdown: null,
+                failureChance: 0,
                 dexFeeBps: 0,
                 grossReturnSol,
                 netReturnSol: grossReturnSol,
@@ -142,13 +275,26 @@ class EngineService {
             };
         }
 
-        if (this.shouldSimulateFailure(exec.sellFailureChance) && failedSellAttempts < exec.maxSellFailureRetries) {
+        const slippage = this.calculateDynamicSlippage('sell', {
+            volatility: position.volatility,
+            priceRange: position.priceRange,
+            liquidityUsd: position.liquidityUsd,
+            positionSizeSol: position.positionSize,
+            failedSellAttempts
+        });
+        const failureChance = exec.dynamicSlippage
+            ? this.calculateDynamicFailureChance('sell', slippage.slippageBps)
+            : exec.sellFailureChance;
+
+        if (this.shouldSimulateFailure(failureChance) && failedSellAttempts < exec.maxSellFailureRetries) {
             return {
                 ok: false,
                 quotedPrice,
                 executionPrice: null,
                 feeSol: exec.networkFeeSol,
-                slippageBps: totalSlippageBps,
+                slippageBps: slippage.slippageBps,
+                slippageBreakdown: slippage.breakdown,
+                failureChance,
                 dexFeeBps: exec.dexFeeBps,
                 grossReturnSol: 0,
                 netReturnSol: -exec.networkFeeSol,
@@ -160,7 +306,7 @@ class EngineService {
         }
 
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
-        const executionPrice = quotedPrice * (1 - bpsToMultiplier(totalSlippageBps + exec.dexFeeBps));
+        const executionPrice = quotedPrice * (1 - bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps));
         const safeExecutionPrice = Math.max(executionPrice, 0);
         const tokenUnits = Number(position.receivedTokenUnits || 0);
         const grossReturnSol = tokenUnits > 0
@@ -174,7 +320,9 @@ class EngineService {
             quotedPrice,
             executionPrice: safeExecutionPrice,
             feeSol,
-            slippageBps: totalSlippageBps,
+            slippageBps: slippage.slippageBps,
+            slippageBreakdown: slippage.breakdown,
+            failureChance,
             dexFeeBps: exec.dexFeeBps,
             grossReturnSol,
             netReturnSol,
@@ -425,13 +573,13 @@ class EngineService {
         }
 
         const positionSize = Number(config.trading.positionSize);
-        const buyExecution = this.simulateBuyExecution(quotedPrice, positionSize);
+        const buyExecution = this.simulateBuyExecution(quotedPrice, positionSize, token);
 
         if (!buyExecution.ok) {
             console.log(chalk.red.bold(`\n[BUY FAILED] ${token.baseToken.symbol}: ${buyExecution.failureReason}`));
-            console.log(chalk.gray(`Simulated fee lost: ${buyExecution.feeSol.toFixed(6)} SOL`));
+            console.log(chalk.gray(`Simulated fee lost: ${buyExecution.feeSol.toFixed(6)} SOL | Slip: ${buyExecution.slippageBps.toFixed(1)} bps | FailChance: ${(buyExecution.failureChance * 100).toFixed(1)}%`));
             activityLogger.log('PAPER_BUY_FAILED', { symbol: token.baseToken.symbol, address: token.baseToken.address, pairAddress: token.pairAddress, ...buyExecution });
-            await telegram.sendMessage(`🔴 *PAPER BUY FAILED*\nToken: ${token.baseToken.symbol}\nReason: ${buyExecution.failureReason}\nFee Lost: ${buyExecution.feeSol.toFixed(6)} SOL`);
+            await telegram.sendMessage(`🔴 *PAPER BUY FAILED*\nToken: ${token.baseToken.symbol}\nReason: ${buyExecution.failureReason}\nFee Lost: ${buyExecution.feeSol.toFixed(6)} SOL\nSlip: ${buyExecution.slippageBps.toFixed(1)} bps\nFail Chance: ${(buyExecution.failureChance * 100).toFixed(1)}%`);
             return;
         }
         
@@ -451,6 +599,7 @@ class EngineService {
         console.log(chalk.green(`   Dynamic Trailing Stop: ${dynamicTrailingStopPercent}%`));
         console.log(chalk.green(`   Dynamic Take Profit: ${dynamicTargetProfitPercent}%`));
 
+        const liquidityUsd = Number(token.liquidity?.usd || 0);
         this.currentPosition = {
             symbol: token.baseToken.symbol,
             address: token.baseToken.address,
@@ -463,8 +612,12 @@ class EngineService {
             receivedTokenUnits: buyExecution.receivedTokenUnits,
             buyFeeSol: buyExecution.feeSol,
             buySlippageBps: buyExecution.slippageBps,
+            buySlippageBreakdown: buyExecution.slippageBreakdown,
+            buyFailureChance: buyExecution.failureChance,
             dexFeeBps: buyExecution.dexFeeBps,
             failedSellAttempts: 0,
+            liquidityUsd,
+            priceRange,
             observedStartPrice: token.observedStartPrice,
             observedMaxPrice: token.observedMaxPrice,
             observedMinPrice: token.observedMinPrice,
@@ -477,7 +630,7 @@ class EngineService {
 
         console.log(chalk.green.bold(`\n[BUY] Mengunci target: ${this.currentPosition.symbol}`));
         console.log(chalk.gray(`Quoted Entry: $${quotedPrice}`));
-        console.log(chalk.gray(`Executed Entry: $${this.currentPosition.entryPrice} | Fee: ${buyExecution.feeSol.toFixed(6)} SOL | Slip: ${buyExecution.slippageBps} bps`));
+        console.log(chalk.gray(`Executed Entry: $${this.currentPosition.entryPrice} | Fee: ${buyExecution.feeSol.toFixed(6)} SOL | Dynamic Slip: ${buyExecution.slippageBps.toFixed(1)} bps | FailChance: ${(buyExecution.failureChance * 100).toFixed(1)}%`));
 
         await telegram.notifyTrade('BUY', {
             symbol: this.currentPosition.symbol,
@@ -588,8 +741,8 @@ class EngineService {
             storage.saveActivePosition(this.currentPosition);
             activityLogger.log('PAPER_SELL_FAILED', { symbol: this.currentPosition.symbol, address: tokenAddress, attempts: this.currentPosition.failedSellAttempts, ...sellExecution });
             console.log(chalk.red.bold(`\n[SELL FAILED] ${this.currentPosition.symbol}: ${sellExecution.failureReason}`));
-            console.log(chalk.gray(`Attempt: ${this.currentPosition.failedSellAttempts}/${this.getPaperExecutionConfig().maxSellFailureRetries} | Fee lost: ${sellExecution.feeSol.toFixed(6)} SOL`));
-            await telegram.sendMessage(`🟠 *PAPER SELL FAILED*\nToken: ${this.currentPosition.symbol}\nReason: ${sellExecution.failureReason}\nAttempt: ${this.currentPosition.failedSellAttempts}/${this.getPaperExecutionConfig().maxSellFailureRetries}\nFee Lost: ${sellExecution.feeSol.toFixed(6)} SOL`);
+            console.log(chalk.gray(`Attempt: ${this.currentPosition.failedSellAttempts}/${this.getPaperExecutionConfig().maxSellFailureRetries} | Fee lost: ${sellExecution.feeSol.toFixed(6)} SOL | Slip: ${sellExecution.slippageBps.toFixed(1)} bps | FailChance: ${(sellExecution.failureChance * 100).toFixed(1)}%`));
+            await telegram.sendMessage(`🟠 *PAPER SELL FAILED*\nToken: ${this.currentPosition.symbol}\nReason: ${sellExecution.failureReason}\nAttempt: ${this.currentPosition.failedSellAttempts}/${this.getPaperExecutionConfig().maxSellFailureRetries}\nFee Lost: ${sellExecution.feeSol.toFixed(6)} SOL\nSlip: ${sellExecution.slippageBps.toFixed(1)} bps\nFail Chance: ${(sellExecution.failureChance * 100).toFixed(1)}%`);
             this.startMonitoring();
             return;
         }
@@ -611,6 +764,8 @@ class EngineService {
             totalFeeSol: Number(this.currentPosition.buyFeeSol || 0) + sellExecution.feeSol + accumulatedFailedSellFeesSol,
             accumulatedFailedSellFeesSol,
             sellSlippageBps: sellExecution.slippageBps,
+            sellSlippageBreakdown: sellExecution.slippageBreakdown,
+            sellFailureChance: sellExecution.failureChance,
             reason,
             closedAt: new Date().toISOString()
         };
