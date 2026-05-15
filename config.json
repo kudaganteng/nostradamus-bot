@@ -43,11 +43,26 @@
     "intervalSeconds": 3,
     "maxDumpPercent": 22,
     "maxFromPeakPercent": 10,
-    "minUniquePrices": 3,
-    "rejectZeroMovement": true
+    "minUniquePrices": 1,
+    "rejectZeroMovement": false
   },
   "adaptiveRisk": {
     "maxAllowedVolatility": 3.5,
+    "flatObservation": {
+      "enabled": true,
+      "maxUniquePrices": 1,
+      "targetProfitPercent": 5,
+      "stopLossPercent": 4,
+      "trailingStartPercent": 3,
+      "trailingStopPercent": 1.5,
+      "timeLimitMinutes": 4,
+      "minPnlAfterSeconds": 60,
+      "minPnlRequired": 1,
+      "earlyExitRules": [
+        { "seconds": 30, "maxLossPercent": -2.5 },
+        { "seconds": 60, "maxLossPercent": -3.5 }
+      ]
+    },
     "profitLockTiers": [
       { "maxPnl": 6, "lockPnl": 3 },
       { "maxPnl": 10, "lockPnl": 6 },
