@@ -9,12 +9,17 @@
     "timeLimitMinutes": 10
   },
   "priceMonitoring": {
-    "source": "dexscreener",
+    "source": "jupiter",
     "activeIntervalMs": 750,
     "observationIntervalMs": 750,
     "timeoutMs": 800,
     "minDelayMs": 150,
-    "validateOnChainOnce": true
+    "validateOnChainOnce": true,
+    "fallbackToDexScreener": true,
+    "jupiterQuoteUrl": "https://quote-api.jup.ag/v6/quote",
+    "jupiterSlippageBps": 100,
+    "jupiterOnlyDirectRoutes": false,
+    "assumedSolUsd": 150
   },
   "paperExecution": {
     "enabled": true,
