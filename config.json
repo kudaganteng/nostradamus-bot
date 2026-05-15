@@ -41,11 +41,44 @@
   "observation": {
     "durationSeconds": 10,
     "intervalSeconds": 3,
-    "maxDumpPercent": 22
+    "maxDumpPercent": 22,
+    "maxFromPeakPercent": 10,
+    "minUniquePrices": 3,
+    "rejectZeroMovement": true
+  },
+  "adaptiveRisk": {
+    "maxAllowedVolatility": 3.5,
+    "profitLockTiers": [
+      { "maxPnl": 6, "lockPnl": 3 },
+      { "maxPnl": 10, "lockPnl": 6 },
+      { "maxPnl": 15, "lockPnl": 9 }
+    ],
+    "earlyExitRules": [
+      { "seconds": 30, "maxLossPercent": -4 },
+      { "seconds": 60, "maxLossPercent": -5 },
+      { "seconds": 90, "maxLossPercent": -6 }
+    ],
+    "minPnlAfterSeconds": 90,
+    "minPnlRequired": 2,
+    "stagnationRules": [
+      { "minutes": 3, "minMaxPnl": 3 },
+      { "minutes": 5, "exitIfPnlBelow": 0 },
+      { "minutes": 7, "minMaxPnl": 5 }
+    ],
+    "maxStopLossCountBeforeCooldown": 3,
+    "extendedCooldownHours": 12,
+    "sessionBlacklistStopLossCount": 5,
+    "avoidIfLastNTradesNegative": 3,
+    "minTokenScore": -2,
+    "maxPortfolioDrawdownPercent": 10,
+    "recentTradeCount": 5,
+    "recentTradesMaxTotalPnlPercent": -20,
+    "stopLossBurstCount": 3,
+    "stopLossBurstWindowMinutes": 10
   },
   "riskManagement": {
-    "slCooldown1xMinutes": 15,
-    "slCooldown2xMinutes": 60,
+    "slCooldown1xMinutes": 30,
+    "slCooldown2xMinutes": 120,
     "rugpullThresholdPercent": -40,
     "maxConsecutiveLosses": 3,
     "globalPauseMinutes": 30
