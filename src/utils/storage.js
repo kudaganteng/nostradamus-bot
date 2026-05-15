@@ -95,6 +95,20 @@ const Storage = {
         return readJson(PORTFOLIO_FILE, createInitialPortfolio());
     },
 
+    getTrades() {
+        return readJson(TRADES_FILE, []);
+    },
+
+    getRecentTrades(limit = 10) {
+        const trades = this.getTrades();
+        return trades.slice(Math.max(0, trades.length - limit));
+    },
+
+    getTradesByAddress(address) {
+        if (!address) return [];
+        return this.getTrades().filter(trade => trade.address === address);
+    },
+
     saveTrade(trade) {
         const trades = readJson(TRADES_FILE, []);
         trades.push(trade);
