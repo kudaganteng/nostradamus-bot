@@ -7,6 +7,9 @@ const activityLogger = require('../utils/activityLogger');
 const { Connection, PublicKey } = require('@solana/web3.js');
 require('dotenv').config();
 
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
+const SOL_DECIMALS = 9;
+
 function getAlchemyRpcUrl() {
     const url = process.env.ALCHEMY_RPC_URL;
     if (!url || !url.trim()) throw new Error('ALCHEMY_RPC_URL belum diisi. Tambahkan ALCHEMY_RPC_URL ke file .env.');
@@ -44,6 +47,7 @@ class EngineService {
         this.checkInterval = null;
         this.isPolling = false;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
+        this.decimalsCache = new Map();
         this.hasRecovered = false;
         this.currentPosition = storage.loadActivePosition();
 
@@ -62,7 +66,12 @@ class EngineService {
             observationIntervalMs: Math.max(250, safeNumber(pm.observationIntervalMs, 750)),
             timeoutMs: Math.max(300, safeNumber(pm.timeoutMs, 800)),
             minDelayMs: Math.max(50, safeNumber(pm.minDelayMs, 150)),
-            validateOnChainOnce: pm.validateOnChainOnce !== false
+            validateOnChainOnce: pm.validateOnChainOnce !== false,
+            fallbackToDexScreener: pm.fallbackToDexScreener !== false,
+            jupiterQuoteUrl: pm.jupiterQuoteUrl || 'https://quote-api.jup.ag/v6/quote',
+            jupiterSlippageBps: Math.max(1, safeNumber(pm.jupiterSlippageBps, 100)),
+            jupiterOnlyDirectRoutes: pm.jupiterOnlyDirectRoutes === true,
+            assumedSolUsd: Math.max(1, safeNumber(pm.assumedSolUsd, 150))
         };
     }
 
@@ -156,7 +165,7 @@ class EngineService {
         if (liquidityUsd > 0 && liquidityUsd < exec.lowLiquidityThresholdUsd) {
             liquidityBps = (1 - liquidityUsd / exec.lowLiquidityThresholdUsd) * exec.lowLiquiditySlippageBps;
         }
-        const positionUsd = positionSizeSol * 150;
+        const positionUsd = positionSizeSol * this.getPriceMonitoringConfig().assumedSolUsd;
         const sizeImpactBps = liquidityUsd > 0 ? (positionUsd / liquidityUsd) * exec.sizeImpactMultiplier * 100 : exec.sizeImpactMultiplier;
         const jitterBps = Math.random() * Math.max(0, exec.randomJitterBps);
         const retryPenaltyBps = isBuy ? 0 : failedSellAttempts * exec.sellRetryPenaltyBps;
@@ -178,7 +187,10 @@ class EngineService {
 
     simulateBuyExecution(quotedPrice, positionSizeSol, token = {}) {
         const exec = this.getPaperExecutionConfig();
-        if (!exec.enabled) return { ok: true, quotedPrice, executionPrice: quotedPrice, feeSol: 0, slippageBps: 0, slippageBreakdown: null, failureChance: 0, dexFeeBps: 0, receivedTokenUnits: positionSizeSol / quotedPrice, spentSol: positionSizeSol, failureReason: null };
+        const assumedSolUsd = this.getPriceMonitoringConfig().assumedSolUsd;
+        if (!exec.enabled) {
+            return { ok: true, quotedPrice, executionPrice: quotedPrice, feeSol: 0, slippageBps: 0, slippageBreakdown: null, failureChance: 0, dexFeeBps: 0, receivedTokenUnits: (positionSizeSol * assumedSolUsd) / quotedPrice, spentSol: positionSizeSol, failureReason: null };
+        }
         const liquidityUsd = safeNumber(token.liquidity?.usd || token.liquidityUsd, 0);
         const slippage = this.calculateDynamicSlippage('buy', { volatility: token.volatility, priceRange: token.priceRange, liquidityUsd, positionSizeSol, flatObservation: token.flatObservation });
         const failureChance = exec.dynamicSlippage ? this.calculateDynamicFailureChance('buy', slippage.slippageBps) : exec.buyFailureChance;
@@ -186,15 +198,16 @@ class EngineService {
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
         const effectiveSpendSol = Math.max(positionSizeSol - feeSol, 0);
         const executionPrice = quotedPrice * (1 + bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps));
-        const receivedTokenUnits = executionPrice > 0 ? effectiveSpendSol / executionPrice : 0;
+        const receivedTokenUnits = executionPrice > 0 ? (effectiveSpendSol * assumedSolUsd) / executionPrice : 0;
         return { ok: true, quotedPrice, executionPrice, feeSol, slippageBps: slippage.slippageBps, slippageBreakdown: slippage.breakdown, failureChance, dexFeeBps: exec.dexFeeBps, receivedTokenUnits, spentSol: positionSizeSol, failureReason: null };
     }
 
     simulateSellExecution(quotedPrice, position, reason) {
         const exec = this.getPaperExecutionConfig();
+        const assumedSolUsd = this.getPriceMonitoringConfig().assumedSolUsd;
         const failedSellAttempts = safeNumber(position.failedSellAttempts, 0);
         if (!exec.enabled) {
-            const grossReturnSol = position.receivedTokenUnits ? position.receivedTokenUnits * quotedPrice : position.positionSize * (quotedPrice / position.entryPrice);
+            const grossReturnSol = position.positionSize * (quotedPrice / position.entryPrice);
             const netPnlSol = grossReturnSol - position.positionSize;
             return { ok: true, quotedPrice, executionPrice: quotedPrice, feeSol: 0, slippageBps: 0, slippageBreakdown: null, failureChance: 0, dexFeeBps: 0, grossReturnSol, netReturnSol: grossReturnSol, netPnlSol, netPnlPercent: (netPnlSol / position.positionSize) * 100, failureReason: null, reason };
         }
@@ -204,7 +217,7 @@ class EngineService {
         const feeSol = exec.networkFeeSol + exec.priorityFeeSol;
         const executionPrice = Math.max(quotedPrice * (1 - bpsToMultiplier(slippage.slippageBps + exec.dexFeeBps)), 0);
         const tokenUnits = safeNumber(position.receivedTokenUnits, 0);
-        const grossReturnSol = tokenUnits > 0 ? tokenUnits * executionPrice : position.positionSize * (executionPrice / position.entryPrice);
+        const grossReturnSol = tokenUnits > 0 ? (tokenUnits * executionPrice) / assumedSolUsd : position.positionSize * (executionPrice / position.entryPrice);
         const netReturnSol = Math.max(grossReturnSol - feeSol, 0);
         const netPnlSol = netReturnSol - position.positionSize;
         return { ok: true, quotedPrice, executionPrice, feeSol, slippageBps: slippage.slippageBps, slippageBreakdown: slippage.breakdown, failureChance, dexFeeBps: exec.dexFeeBps, grossReturnSol, netReturnSol, netPnlSol, netPnlPercent: (netPnlSol / position.positionSize) * 100, failureReason: null, reason };
@@ -235,7 +248,75 @@ class EngineService {
         }
     }
 
-    async getCurrentPrice(pairAddress, validateOnChain = false, timeoutMs = null) {
+    getJupiterHeaders() {
+        const headers = { Accept: 'application/json' };
+        if (process.env.JUPITER_API_KEY) headers['x-api-key'] = process.env.JUPITER_API_KEY;
+        return headers;
+    }
+
+    async getTokenDecimals(mint) {
+        if (mint === SOL_MINT) return SOL_DECIMALS;
+        if (this.decimalsCache.has(mint)) return this.decimalsCache.get(mint);
+        try {
+            const account = await this.connection.getParsedAccountInfo(new PublicKey(mint));
+            const decimals = account.value?.data?.parsed?.info?.decimals;
+            const parsedDecimals = Number.isFinite(Number(decimals)) ? Number(decimals) : 6;
+            this.decimalsCache.set(mint, parsedDecimals);
+            return parsedDecimals;
+        } catch (error) {
+            activityLogger.log('TOKEN_DECIMALS_ERROR', { mint, error: error.message });
+            return 6;
+        }
+    }
+
+    async getJupiterSellPrice(position, timeoutMs = null) {
+        try {
+            const pm = this.getPriceMonitoringConfig();
+            const tokenUnits = safeNumber(position.receivedTokenUnits, 0);
+            if (!position.address || tokenUnits <= 0) return null;
+
+            const decimals = await this.getTokenDecimals(position.address);
+            const amount = Math.floor(tokenUnits * Math.pow(10, decimals));
+            if (!Number.isFinite(amount) || amount <= 0) return null;
+
+            const params = {
+                inputMint: position.address,
+                outputMint: SOL_MINT,
+                amount: String(amount),
+                slippageBps: String(pm.jupiterSlippageBps),
+                onlyDirectRoutes: String(pm.jupiterOnlyDirectRoutes)
+            };
+
+            const response = await axios.get(pm.jupiterQuoteUrl, {
+                params,
+                headers: this.getJupiterHeaders(),
+                timeout: timeoutMs || pm.timeoutMs
+            });
+
+            const outAmountLamports = safeNumber(response.data?.outAmount, 0);
+            if (outAmountLamports <= 0) return null;
+
+            const outSol = outAmountLamports / Math.pow(10, SOL_DECIMALS);
+            const tokenPriceUsd = (outSol / tokenUnits) * pm.assumedSolUsd;
+            if (!Number.isFinite(tokenPriceUsd) || tokenPriceUsd <= 0) return null;
+
+            position.lastJupiterQuoteAt = new Date().toISOString();
+            position.lastJupiterOutSol = outSol;
+            position.lastJupiterPriceUsd = tokenPriceUsd;
+            position.lastJupiterPriceImpactPct = response.data?.priceImpactPct;
+
+            return tokenPriceUsd;
+        } catch (error) {
+            activityLogger.log('JUPITER_QUOTE_ERROR', {
+                symbol: position.symbol,
+                address: position.address,
+                error: error.response?.data?.error || error.message
+            });
+            return null;
+        }
+    }
+
+    async getDexScreenerPrice(pairAddress, validateOnChain = false, timeoutMs = null) {
         try {
             const pm = this.getPriceMonitoringConfig();
             const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`, { timeout: timeoutMs || pm.timeoutMs });
@@ -253,6 +334,21 @@ class EngineService {
             }
             return null;
         }
+    }
+
+    async getCurrentPrice(pairAddress, validateOnChain = false, timeoutMs = null) {
+        return this.getDexScreenerPrice(pairAddress, validateOnChain, timeoutMs);
+    }
+
+    async getActivePositionPrice(timeoutMs = null) {
+        const pm = this.getPriceMonitoringConfig();
+        if (pm.source === 'jupiter') {
+            const jupiterPrice = await this.getJupiterSellPrice(this.currentPosition, timeoutMs);
+            if (jupiterPrice) return { price: jupiterPrice, source: 'jupiter' };
+            if (!pm.fallbackToDexScreener) return { price: null, source: 'jupiter_miss' };
+        }
+        const dexPrice = await this.getDexScreenerPrice(this.currentPosition.pairAddress, false, timeoutMs);
+        return { price: dexPrice, source: dexPrice ? 'dexscreener' : 'dex_miss' };
     }
 
     async checkWalletMonopoly(tokenAddress) {
@@ -375,7 +471,7 @@ class EngineService {
         const startedAt = Date.now();
         const durationMs = safeNumber(obs.durationSeconds, 10) * 1000;
         while (Date.now() - startedAt < durationMs) {
-            const currentPrice = await this.getCurrentPrice(token.pairAddress, false, pm.timeoutMs);
+            const currentPrice = await this.getDexScreenerPrice(token.pairAddress, false, pm.timeoutMs);
             if (currentPrice) prices.push(currentPrice);
             process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length} tick...\r`));
             await sleep(pm.observationIntervalMs);
@@ -522,11 +618,12 @@ class EngineService {
 
     async checkPositionOnce(pm = this.getPriceMonitoringConfig()) {
         if (!this.currentPosition) return;
-        const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress, false, pm.timeoutMs);
-        if (!currentPrice) {
-            process.stdout.write(chalk.gray(`\rMonitoring ${this.currentPosition.symbol}: price tick missed    `));
+        const quote = await this.getActivePositionPrice(pm.timeoutMs);
+        if (!quote.price) {
+            process.stdout.write(chalk.gray(`\rMonitoring ${this.currentPosition.symbol}: price tick missed (${quote.source})    `));
             return;
         }
+        const currentPrice = quote.price;
         const pnl = ((currentPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
         if (currentPrice > this.currentPosition.maxPrice) {
             this.currentPosition.maxPrice = currentPrice;
@@ -534,7 +631,7 @@ class EngineService {
             storage.saveActivePosition(this.currentPosition);
         }
         const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-        process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Flat ${this.currentPosition.flatObservation ? 'Y' : 'N'}    `));
+        process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Src ${quote.source} | Flat ${this.currentPosition.flatObservation ? 'Y' : 'N'}    `));
         this.checkExitConditions(currentPrice, pnl, maxPnl);
     }
 
