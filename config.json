@@ -40,6 +40,7 @@
     "validateOnChainOnce": true,
     "fallbackToDexScreener": true,
     "useJupiterSanityCheck": true,
+    "useJupiterPreEntryValidation": true,
     "jupiterQuoteUrl": "https://api.jup.ag/swap/v1/quote",
     "jupiterSlippageBps": 100,
     "jupiterOnlyDirectRoutes": false,
@@ -47,7 +48,11 @@
     "maxJupiterDexDivergencePercent": 25,
     "maxJupiterPriceImpactPct": 0.05,
     "ignoreJupiterExtremePnlPercent": 40,
-    "ignoreJupiterExtremePnlSeconds": 30
+    "ignoreJupiterExtremePnlSeconds": 30,
+    "maxPreEntryJupiterDexDivergencePercent": 20,
+    "maxPreEntryPriceImpactPct": 0.03,
+    "preEntryQuoteAttempts": 2,
+    "rejectIfJupiterPreEntryFails": true
   },
   "paperExecution": {
     "enabled": true,
