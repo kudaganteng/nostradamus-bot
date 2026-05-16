@@ -1,11 +1,13 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
 const applyPriceSanityPatch = require('./services/priceSanityPatch');
+const applyPreEntryQuotePatch = require('./services/preEntryQuotePatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
 
 applyPriceSanityPatch(engine);
+applyPreEntryQuotePatch(engine);
 
 let isObserving = false;
 let scanCounter = 0;
