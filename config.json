@@ -39,7 +39,7 @@
     "minDelayMs": 150,
     "validateOnChainOnce": true,
     "fallbackToDexScreener": true,
-    "jupiterQuoteUrl": "https://quote-api.jup.ag/v6/quote",
+    "jupiterQuoteUrl": "https://lite-api.jup.ag/swap/v1/quote",
     "jupiterSlippageBps": 100,
     "jupiterOnlyDirectRoutes": false,
     "assumedSolUsd": 150
