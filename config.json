@@ -8,6 +8,29 @@
     "trailingStopPercent": 3,
     "timeLimitMinutes": 10
   },
+  "dailyRisk": {
+    "enabled": true,
+    "maxDailyLossSol": 0.15,
+    "maxDailyLossPercent": 15,
+    "pauseMinutesAfterDailyLoss": 1440
+  },
+  "positionSizing": {
+    "enabled": true,
+    "baseSizeSol": 0.2,
+    "minSizeSol": 0.05,
+    "maxSizeSol": 0.2,
+    "flatObservationMultiplier": 0.5,
+    "lowLiquidityMultiplier": 0.6,
+    "highVolatilityMultiplier": 0.7,
+    "drawdownMultiplier": 0.6,
+    "losingStreakMultiplier": 0.5,
+    "tokenScorePenaltyMultiplier": 0.7,
+    "lowLiquidityThresholdUsd": 10000,
+    "highVolatilityThreshold": 1.5,
+    "drawdownThresholdPercent": 7,
+    "losingStreakCount": 2,
+    "badTokenScoreThreshold": 0
+  },
   "priceMonitoring": {
     "source": "jupiter",
     "activeIntervalMs": 750,
