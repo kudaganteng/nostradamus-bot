@@ -1,13 +1,11 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
-const applyPriceSanityPatch = require('./services/priceSanityPatch');
-const applyPreEntryQuotePatch = require('./services/preEntryQuotePatch');
+const applyJupiterFullPricePatch = require('./services/jupiterFullPricePatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
 
-applyPriceSanityPatch(engine);
-applyPreEntryQuotePatch(engine);
+applyJupiterFullPricePatch(engine);
 
 let isObserving = false;
 let scanCounter = 0;
@@ -54,10 +52,9 @@ async function startScanLoop() {
 }
 
 console.log(chalk.cyan.bold("====================================="));
-console.log(chalk.cyan.bold("  SOLANA SCALPER (SNIPER MODE v3)    "));
+console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER MODE v4)   "));
 console.log(chalk.cyan.bold("====================================="));
 
-// PANGGIL INISIALISASI DI SINI AGAR FILE JSON PASTI ADA
 storage.init();
 activityLogger.init();
 
