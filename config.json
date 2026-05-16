@@ -65,35 +65,26 @@
       "enabled": true,
       "maxUniquePrices": 1,
       "targetProfitPercent": 5,
-      "stopLossPercent": 4,
-      "trailingStartPercent": 3,
-      "trailingStopPercent": 1.5,
-      "timeLimitMinutes": 4,
-      "minPnlAfterSeconds": 60,
-      "minPnlRequired": 1,
-      "earlyExitMaxPnlThreshold": 1,
-      "earlyExitRules": [
-        { "seconds": 30, "maxLossPercent": -4 },
-        { "seconds": 60, "maxLossPercent": -5 }
-      ]
+      "stopLossPercent": 7,
+      "trailingStartPercent": 7,
+      "trailingStopPercent": 3,
+      "timeLimitMinutes": 10,
+      "minPnlAfterSeconds": 0,
+      "minPnlRequired": 0,
+      "earlyExitMaxPnlThreshold": 0,
+      "earlyExitRules": []
     },
     "profitLockTiers": [
       { "maxPnl": 6, "lockPnl": 3 },
       { "maxPnl": 10, "lockPnl": 6 },
       { "maxPnl": 15, "lockPnl": 9 }
     ],
-    "earlyExitMaxPnlThreshold": 1,
-    "earlyExitRules": [
-      { "seconds": 30, "maxLossPercent": -5 },
-      { "seconds": 60, "maxLossPercent": -6 },
-      { "seconds": 90, "maxLossPercent": -7 }
-    ],
-    "minPnlAfterSeconds": 90,
-    "minPnlRequired": 2,
+    "earlyExitMaxPnlThreshold": 0,
+    "earlyExitRules": [],
+    "minPnlAfterSeconds": 0,
+    "minPnlRequired": 0,
     "stagnationRules": [
-      { "minutes": 3, "minMaxPnl": 3 },
-      { "minutes": 5, "exitIfPnlBelow": 0 },
-      { "minutes": 7, "minMaxPnl": 5 }
+      { "minutes": 10, "minMaxPnl": 2 }
     ],
     "maxStopLossCountBeforeCooldown": 3,
     "extendedCooldownHours": 12,
