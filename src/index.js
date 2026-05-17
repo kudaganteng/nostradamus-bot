@@ -1,7 +1,5 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
-const gmgn = require('./services/gmgnService');
-const config = require('../config.json');
 const applyJupiterFullPricePatch = require('./services/jupiterFullPricePatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
@@ -37,16 +35,6 @@ async function startScanLoop() {
                 if (target) {
                     console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
 
-                    if (config.gmgn?.enabled) {
-                        const gmgnCheck = await gmgn.validateToken(target.baseToken.address);
-                        if (!gmgnCheck.ok) {
-                            console.log(chalk.yellow(`[GMGN] Skip ${target.baseToken.symbol}: ${gmgnCheck.reason}`));
-                            coolDownToken(target, config.gmgn?.rejectCooldownMinutes || 5, `GMGN rejected: ${gmgnCheck.reason}`);
-                            continue;
-                        }
-                        console.log(chalk.green(`[GMGN] ${target.baseToken.symbol} passed: ${gmgnCheck.reason}`));
-                    }
-
                     isObserving = true;
                     const isConfirmed = await engine.observeAndConfirm(target);
                     isObserving = false;
@@ -68,7 +56,7 @@ async function startScanLoop() {
 }
 
 console.log(chalk.cyan.bold("====================================="));
-console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER+GMGN v5)   "));
+console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER MODE v5)   "));
 console.log(chalk.cyan.bold("====================================="));
 
 storage.init();
