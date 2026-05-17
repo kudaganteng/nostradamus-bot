@@ -1,5 +1,7 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
+const gmgn = require('./services/gmgnService');
+const config = require('../config.json');
 const applyJupiterFullPricePatch = require('./services/jupiterFullPricePatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
@@ -11,6 +13,14 @@ let isObserving = false;
 let scanCounter = 0;
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function coolDownToken(target, minutes, reason) {
+    const state = storage.getState();
+    state.tokenStats[target.baseToken.address] = state.tokenStats[target.baseToken.address] || { slCount: 0, cooldownUntil: 0, blacklisted: false };
+    state.tokenStats[target.baseToken.address].cooldownUntil = Date.now() + (minutes * 60 * 1000);
+    storage.saveState(state);
+    console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown ${minutes} menit: ${reason}`));
+}
 
 async function startScanLoop() {
     while (true) {
@@ -27,6 +37,16 @@ async function startScanLoop() {
                 if (target) {
                     console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
 
+                    if (config.gmgn?.enabled) {
+                        const gmgnCheck = await gmgn.validateToken(target.baseToken.address);
+                        if (!gmgnCheck.ok) {
+                            console.log(chalk.yellow(`[GMGN] Skip ${target.baseToken.symbol}: ${gmgnCheck.reason}`));
+                            coolDownToken(target, config.gmgn?.rejectCooldownMinutes || 5, `GMGN rejected: ${gmgnCheck.reason}`);
+                            continue;
+                        }
+                        console.log(chalk.green(`[GMGN] ${target.baseToken.symbol} passed: ${gmgnCheck.reason}`));
+                    }
+
                     isObserving = true;
                     const isConfirmed = await engine.observeAndConfirm(target);
                     isObserving = false;
@@ -34,11 +54,7 @@ async function startScanLoop() {
                     if (isConfirmed) {
                         await engine.openPosition(target);
                     } else {
-                        console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown 3 menit karena gagal Breakout.`));
-                        const state = storage.getState();
-                        state.tokenStats[target.baseToken.address] = state.tokenStats[target.baseToken.address] || { slCount: 0, cooldownUntil: 0, blacklisted: false };
-                        state.tokenStats[target.baseToken.address].cooldownUntil = Date.now() + (3 * 60 * 1000);
-                        storage.saveState(state);
+                        coolDownToken(target, 3, 'gagal Breakout');
                     }
                 }
             } catch (error) {
@@ -52,7 +68,7 @@ async function startScanLoop() {
 }
 
 console.log(chalk.cyan.bold("====================================="));
-console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER MODE v4)   "));
+console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER+GMGN v5)   "));
 console.log(chalk.cyan.bold("====================================="));
 
 storage.init();
