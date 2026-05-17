@@ -40,9 +40,7 @@
   "riskManagement": {
     "slCooldown1xMinutes": 15,
     "slCooldown2xMinutes": 60,
-    "rugpullThresholdPercent": -40,
-    "maxConsecutiveLosses": 3,
-    "globalPauseMinutes": 30
+    "rugpullThresholdPercent": -40
   },
   "filters": {
     "minLiquidity": 2000,
