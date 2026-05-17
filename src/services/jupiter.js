@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const axios = require('axios');
 const config = require('../../config.json');
 
@@ -12,6 +14,17 @@ function toRawAmount(amount, decimals) {
 
 function fromRawAmount(rawAmount, decimals) {
     return Number(rawAmount) / Math.pow(10, decimals);
+}
+
+function getJupiterHeaders() {
+    const headers = {};
+    const apiKey = process.env.JUPITER_API_KEY;
+
+    if (apiKey) {
+        headers['x-api-key'] = apiKey;
+    }
+
+    return headers;
 }
 
 function getExecutionConfig() {
@@ -40,6 +53,7 @@ class JupiterService {
         const execConfig = getExecutionConfig();
         const response = await axios.get(execConfig.quoteEndpoint, {
             timeout: 8000,
+            headers: getJupiterHeaders(),
             params: {
                 inputMint,
                 outputMint,
