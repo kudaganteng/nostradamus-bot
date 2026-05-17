@@ -92,8 +92,7 @@
     "maxDumpPercent": 16,
     "maxFromPeakPercent": 8,
     "minUniquePrices": 2,
-    "rejectZeroMovement": true,
-    "minMomentumPercent": 0.25
+    "rejectZeroMovement": true
   },
   "adaptiveRisk": {
     "maxAllowedVolatility": 3.5,
