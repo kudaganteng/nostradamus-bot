@@ -1,0 +1,8 @@
+{
+  "targetProfitPercent": 5,
+  "stopLossPercent": 5,
+  "trailingStartPercent": 7,
+  "trailingStopPercent": 3,
+  "updatedAt": "2026-05-17T02:47:19.405Z",
+  "updatedBy": "telegram"
+}
