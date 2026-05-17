@@ -43,7 +43,17 @@ async function startScanLoop() {
                     isObserving = false;
 
                     if (isConfirmed) {
-                        await engine.openPosition(target);
+                        const entryResult = await engine.openPosition(target);
+                        if (!entryResult?.ok && !engine.currentPosition) {
+                            const reason = entryResult?.reason || 'entry gagal tanpa alasan detail';
+                            console.log(chalk.yellow(`[ENTRY FAILED] ${target.baseToken.symbol}: ${reason}`));
+                            activityLogger.log('ENTRY_FAILED_AFTER_CONFIRMATION', {
+                                symbol: target.baseToken.symbol,
+                                address: target.baseToken.address,
+                                reason
+                            });
+                            coolDownToken(target, 5, `entry gagal: ${reason}`);
+                        }
                     } else {
                         coolDownToken(target, 3, 'gagal Breakout');
                     }
