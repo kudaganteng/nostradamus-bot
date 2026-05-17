@@ -27,12 +27,25 @@ function priceStats(prices) {
   const endPrice = prices[prices.length - 1];
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
-  const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
+  const momentumPercent = startPrice > 0 ? ((endPrice - startPrice) / startPrice) * 100 : 0;
+  const maxDropPercent = maxPrice > 0 ? ((maxPrice - minPrice) / maxPrice) * 100 : 0;
+  const pullbackFromPeakPercent = maxPrice > 0 ? ((maxPrice - endPrice) / maxPrice) * 100 : 0;
   const changes = [];
   for (let i = 1; i < prices.length; i++) changes.push(((prices[i] - prices[i - 1]) / prices[i - 1]) * 100);
   const mean = changes.reduce((a, b) => a + b, 0) / Math.max(changes.length, 1);
   const volatility = Math.sqrt(changes.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / Math.max(changes.length, 1));
-  return { startPrice, endPrice, minPrice, maxPrice, maxDropPercent, volatility };
+  return { startPrice, endPrice, minPrice, maxPrice, momentumPercent, maxDropPercent, pullbackFromPeakPercent, volatility };
+}
+
+function rejectObservation(token, reason, extra = {}) {
+  activityLogger.log('JUPITER_OBSERVATION_REJECTED', {
+    symbol: token.baseToken?.symbol,
+    address: token.baseToken?.address,
+    reason,
+    ...extra
+  });
+  console.log(`\n[Observer] ❌ ${token.baseToken?.symbol} ditolak: ${reason}`);
+  return false;
 }
 
 function applyJupiterFullPricePatch(engine) {
@@ -76,7 +89,9 @@ function applyJupiterFullPricePatch(engine) {
     activityLogger.log('OBSERVATION_START', { symbol: token.baseToken?.symbol, source: 'jupiter' });
     console.log(`\n[Observer] Mengawasi ${token.baseToken?.symbol} via Jupiter quote selama ${obs.durationSeconds} detik...`);
 
-    if (this.getPriceMonitoringConfig().validateOnChainOnce && !(await this.validateTokenOnChain(token.baseToken.address))) return false;
+    if (this.getPriceMonitoringConfig().validateOnChainOnce && !(await this.validateTokenOnChain(token.baseToken.address))) {
+      return rejectObservation(token, 'token account tidak valid on-chain');
+    }
 
     const prices = [];
     const quotes = [];
@@ -101,22 +116,35 @@ function applyJupiterFullPricePatch(engine) {
     }
 
     if (prices.length < 3) {
-      if (cfg.rejectOnFail) return false;
+      if (cfg.rejectOnFail) return rejectObservation(token, 'quote Jupiter kurang dari 3 tick', { ticks: prices.length });
       return originalObserveAndConfirm(token);
     }
 
+    const minUniquePrices = Math.max(1, n(obs.minUniquePrices, 3));
     const uniquePrices = new Set(prices.map(price => Number(price).toPrecision(12))).size;
-    if (uniquePrices < n(obs.minUniquePrices, 1)) return false;
+    if (uniquePrices < minUniquePrices) {
+      return rejectObservation(token, `unique price kurang (${uniquePrices}/${minUniquePrices})`, { uniquePrices, minUniquePrices });
+    }
+
+    if (obs.rejectZeroMovement !== false && uniquePrices <= 1) {
+      return rejectObservation(token, 'zero movement / harga flat', { uniquePrices });
+    }
 
     const stats = priceStats(prices);
+    const minMomentumPercent = n(obs.minMomentumPercent, 0.5);
     const flatObservation = this.isFlatObservation(uniquePrices);
-    if (((stats.endPrice - stats.startPrice) / stats.startPrice) * 100 < -3) return false;
-    if (stats.maxDropPercent > n(obs.maxDumpPercent, 22)) return false;
-    if (((stats.maxPrice - stats.endPrice) / stats.maxPrice) * 100 > n(obs.maxFromPeakPercent, 10)) return false;
-    if (!flatObservation && stats.volatility > ar.maxAllowedVolatility) return false;
+
+    if (stats.momentumPercent < minMomentumPercent) {
+      return rejectObservation(token, `momentum kurang (${stats.momentumPercent.toFixed(2)}% < ${minMomentumPercent}%)`, stats);
+    }
+    if (stats.momentumPercent < -3) return rejectObservation(token, 'momentum negatif lebih dari 3%', stats);
+    if (stats.maxDropPercent > n(obs.maxDumpPercent, 22)) return rejectObservation(token, 'max dump terlalu besar', stats);
+    if (stats.pullbackFromPeakPercent > n(obs.maxFromPeakPercent, 10)) return rejectObservation(token, 'pullback dari peak terlalu besar', stats);
+    if (!flatObservation && stats.volatility > ar.maxAllowedVolatility) return rejectObservation(token, 'volatilitas terlalu tinggi', { ...stats, maxAllowedVolatility: ar.maxAllowedVolatility });
 
     const lastQuote = quotes[quotes.length - 1];
-    if (Math.abs(n(lastQuote?.priceImpactPct, 0)) > cfg.maxImpact) return false;
+    const impact = Math.abs(n(lastQuote?.priceImpactPct, 0));
+    if (impact > cfg.maxImpact) return rejectObservation(token, 'price impact Jupiter terlalu besar', { impact, maxImpact: cfg.maxImpact });
 
     Object.assign(token, {
       volatility: stats.volatility,
@@ -128,10 +156,12 @@ function applyJupiterFullPricePatch(engine) {
       uniquePrices,
       flatObservation,
       jupiterEntryQuote: lastQuote,
-      jupiterObservedPrices: prices
+      jupiterObservedPrices: prices,
+      jupiterMomentumPercent: stats.momentumPercent,
+      jupiterPullbackFromPeakPercent: stats.pullbackFromPeakPercent
     });
 
-    console.log('\n[Observer] Jupiter confirmed. Entry price sekarang pakai quote Jupiter.');
+    console.log(`\n[Observer] ✅ Jupiter confirmed. Momentum ${stats.momentumPercent.toFixed(2)}%, unique prices ${uniquePrices}.`);
     return true;
   };
 
