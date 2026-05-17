@@ -35,6 +35,28 @@ function priceStats(prices) {
   return { startPrice, endPrice, minPrice, maxPrice, maxDropPercent, volatility };
 }
 
+function patchOpenPositionResult(engine) {
+  if (!engine || engine.__openPositionResultPatchApplied) return;
+
+  const originalOpenPosition = engine.openPosition?.bind(engine);
+  engine.openPosition = async function openPositionWithResult(token) {
+    if (this.currentPosition) {
+      return { ok: false, reason: 'Sudah ada posisi aktif' };
+    }
+
+    const before = this.currentPosition;
+    const result = await originalOpenPosition(token);
+
+    if (this.currentPosition && this.currentPosition !== before) {
+      return { ok: true, position: this.currentPosition, result };
+    }
+
+    return { ok: false, reason: 'Engine gagal membuka posisi. Kemungkinan fresh quote Jupiter gagal, confirmedEntryPrice invalid, history guard, atau simulated BUY failed.' };
+  };
+
+  engine.__openPositionResultPatchApplied = true;
+}
+
 function applyJupiterFullPricePatch(engine) {
   if (!engine || engine.__jupiterFullPricePatchApplied) return engine;
 
@@ -145,20 +167,34 @@ function applyJupiterFullPricePatch(engine) {
     try {
       const quote = await jupiterMarket.getProbePrice(token.baseToken.address, size, cfg.timeoutMs);
       if (!quote?.impliedPriceUsd) {
-        activityLogger.log('JUPITER_ENTRY_REJECTED', { symbol: token.baseToken?.symbol, address: token.baseToken?.address, reason: 'missing_quote' });
-        if (cfg.rejectOnFail) return;
+        const reason = 'fresh Jupiter entry quote kosong';
+        console.log(`\n[ENTRY SKIPPED] ${token.baseToken?.symbol}: ${reason}`);
+        activityLogger.log('JUPITER_ENTRY_REJECTED', { symbol: token.baseToken?.symbol, address: token.baseToken?.address, reason });
+        if (cfg.rejectOnFail) return { ok: false, reason };
       } else {
         token.confirmedEntryPrice = quote.impliedPriceUsd;
         token.jupiterEntryQuote = quote;
       }
     } catch (error) {
-      activityLogger.log('JUPITER_ENTRY_ERROR', { symbol: token.baseToken?.symbol, address: token.baseToken?.address, error: error.response?.data?.error || error.message });
-      if (cfg.rejectOnFail) return;
+      const reason = error.response?.data?.error || error.message;
+      console.log(`\n[ENTRY SKIPPED] ${token.baseToken?.symbol}: fresh Jupiter entry quote error - ${reason}`);
+      activityLogger.log('JUPITER_ENTRY_ERROR', { symbol: token.baseToken?.symbol, address: token.baseToken?.address, error: reason });
+      if (cfg.rejectOnFail) return { ok: false, reason: `Jupiter entry error: ${reason}` };
     }
 
-    return originalOpenPosition(token);
+    const before = this.currentPosition;
+    const result = await originalOpenPosition(token);
+    if (this.currentPosition && this.currentPosition !== before) {
+      return { ok: true, position: this.currentPosition, result };
+    }
+
+    const reason = 'original engine.openPosition tidak membuat posisi aktif';
+    console.log(`\n[ENTRY SKIPPED] ${token.baseToken?.symbol}: ${reason}`);
+    activityLogger.log('ENGINE_OPEN_POSITION_FAILED', { symbol: token.baseToken?.symbol, address: token.baseToken?.address, reason });
+    return { ok: false, reason };
   };
 
+  patchOpenPositionResult(engine);
   engine.__jupiterFullPricePatchApplied = true;
   return engine;
 }
