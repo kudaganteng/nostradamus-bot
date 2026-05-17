@@ -1,11 +1,14 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
+const telegram = require('./services/telegram');
 const applyJupiterFullPricePatch = require('./services/jupiterFullPricePatch');
+const applyRuntimeRiskPatch = require('./services/runtimeRiskPatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
 
 applyJupiterFullPricePatch(engine);
+applyRuntimeRiskPatch(engine);
 
 let isObserving = false;
 let scanCounter = 0;
@@ -61,5 +64,6 @@ console.log(chalk.cyan.bold("====================================="));
 
 storage.init();
 activityLogger.init();
+telegram.startControls(engine);
 
 startScanLoop();
