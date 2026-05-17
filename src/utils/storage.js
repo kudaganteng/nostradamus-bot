@@ -82,11 +82,13 @@ const Storage = {
         writeJson(TRADES_FILE, trades);
 
         const portfolio = this.getPortfolio();
-        const profitInSol = (trade.pnl / 100) * trade.positionSize;
+        const profitInSol = Number.isFinite(trade.netProfitSol)
+            ? trade.netProfitSol
+            : (trade.pnl / 100) * trade.positionSize;
 
         portfolio.currentBalance += profitInSol;
         portfolio.tradeCount += 1;
-        if (trade.pnl > 0) portfolio.winCount += 1;
+        if (profitInSol > 0) portfolio.winCount += 1;
         else portfolio.lossCount += 1;
 
         if (portfolio.currentBalance > portfolio.peakBalance) {
@@ -98,18 +100,14 @@ const Storage = {
         portfolio.totalPnLPercent = ((portfolio.currentBalance - portfolio.startBalance) / portfolio.startBalance) * 100;
 
         writeJson(PORTFOLIO_FILE, portfolio);
-        
-        // Hapus file posisi aktif setelah trade ditutup
+
         if (fs.existsSync(POSITION_FILE)) {
             fs.unlinkSync(POSITION_FILE);
         }
-        
+
         return portfolio;
     },
 
-    /**
-     * Menyimpan posisi aktif ke file untuk recovery jika bot restart
-     */
     saveActivePosition(position) {
         try {
             writeJson(POSITION_FILE, position);
@@ -119,10 +117,6 @@ const Storage = {
         }
     },
 
-    /**
-     * Memuat posisi aktif dari file saat bot restart
-     * @returns {Object|null} Posisi aktif atau null jika tidak ada
-     */
     loadActivePosition() {
         try {
             const position = readJson(POSITION_FILE, null);
