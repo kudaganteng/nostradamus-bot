@@ -2,7 +2,7 @@
   "trading": {
     "paperBalance": 1.0,
     "positionSize": 0.2,
-    "targetProfitPercent": 5,
+    "targetProfitPercent": 10,
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
@@ -87,12 +87,12 @@
     "sellRetryPenaltyBps": 80
   },
   "observation": {
-    "durationSeconds": 15,
+    "durationSeconds": 10,
     "intervalSeconds": 3,
-    "maxDumpPercent": 16,
-    "maxFromPeakPercent": 8,
-    "minUniquePrices": 2,
-    "rejectZeroMovement": true
+    "maxDumpPercent": 22,
+    "maxFromPeakPercent": 10,
+    "minUniquePrices": 1,
+    "rejectZeroMovement": false
   },
   "adaptiveRisk": {
     "maxAllowedVolatility": 3.5,
