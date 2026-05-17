@@ -87,12 +87,13 @@
     "sellRetryPenaltyBps": 80
   },
   "observation": {
-    "durationSeconds": 10,
+    "durationSeconds": 20,
     "intervalSeconds": 3,
-    "maxDumpPercent": 22,
-    "maxFromPeakPercent": 10,
-    "minUniquePrices": 1,
-    "rejectZeroMovement": false
+    "maxDumpPercent": 12,
+    "maxFromPeakPercent": 6,
+    "minUniquePrices": 3,
+    "rejectZeroMovement": true,
+    "minMomentumPercent": 0.5
   },
   "adaptiveRisk": {
     "maxAllowedVolatility": 3.5,
