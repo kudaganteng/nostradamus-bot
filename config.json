@@ -2,6 +2,15 @@
   "rpc": {
     "alchemyUrl": "https://solana-mainnet.g.alchemy.com/v2/O-YUgNdFZmxSp_sLS24b8"
   },
+  "jupiter": {
+    "quoteEndpoint": "https://quote-api.jup.ag/v6/quote",
+    "slippageBps": 500,
+    "maxPriceImpactPct": 10
+  },
+  "costs": {
+    "estimatedSwapFeeSol": 0.000005,
+    "estimatedPriorityFeeSol": 0.00005
+  },
   "trading": {
     "paperBalance": 1.0,
     "positionSize": 0.2,
@@ -12,7 +21,7 @@
     "timeLimitMinutes": 10
   },
   "observation": {
-    "durationSeconds": 10, 
+    "durationSeconds": 10,
     "intervalSeconds": 3,
     "maxDumpPercent": 25
   },
@@ -29,8 +38,8 @@
     "minAgeMinutes": 1,
     "maxAgeMinutes": 1440,
     "minVolume5m": 300,
-    "volumeAccelRatio": 0.8, 
-    "buyerAccelRatio": 0.8, 
+    "volumeAccelRatio": 0.8,
+    "buyerAccelRatio": 0.8,
     "minBuySellRatio": 0.8,
     "minBuys5m": 10,
     "maxPriceChange5m": 300,
