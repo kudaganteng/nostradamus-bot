@@ -33,7 +33,7 @@
   },
   "priceMonitoring": {
     "source": "jupiter",
-    "activeIntervalMs": 750,
+    "activeIntervalMs": 10000,
     "observationIntervalMs": 750,
     "timeoutMs": 3000,
     "minDelayMs": 150,
