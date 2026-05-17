@@ -41,8 +41,6 @@ const Storage = {
 
             if (!fs.existsSync(STATE_FILE)) {
                 writeJson(STATE_FILE, {
-                    globalPauseUntil: 0,
-                    consecutiveLosses: 0,
                     tokenStats: {}
                 });
             }
@@ -52,15 +50,19 @@ const Storage = {
     },
 
     getState() {
-        return readJson(STATE_FILE, {
-            globalPauseUntil: 0,
-            consecutiveLosses: 0,
+        const state = readJson(STATE_FILE, {
             tokenStats: {}
         });
+
+        return {
+            tokenStats: state.tokenStats || {}
+        };
     },
 
     saveState(state) {
-        writeJson(STATE_FILE, state);
+        writeJson(STATE_FILE, {
+            tokenStats: state.tokenStats || {}
+        });
     },
 
     getPortfolio() {
