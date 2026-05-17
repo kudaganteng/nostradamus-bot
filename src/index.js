@@ -1,5 +1,6 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
+const telegram = require('./services/telegram');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
@@ -52,8 +53,8 @@ console.log(chalk.cyan.bold("====================================="));
 console.log(chalk.cyan.bold("  SOLANA SCALPER (SNIPER MODE v3)    "));
 console.log(chalk.cyan.bold("====================================="));
 
-// PANGGIL INISIALISASI DI SINI AGAR FILE JSON PASTI ADA
 storage.init();
 activityLogger.init();
+telegram.startCommandRuntime(engine);
 
 startScanLoop();
