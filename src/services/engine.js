@@ -3,42 +3,36 @@ const chalk = require('chalk');
 const config = require('../../config.json');
 const telegram = require('./telegram');
 const storage = require('../utils/storage');
-const scanner = require('./scanner');
 const activityLogger = require('../utils/activityLogger');
+const jupiter = require('./jupiter');
 const { Connection, PublicKey } = require('@solana/web3.js');
 
 class EngineService {
     constructor() {
-        // Inisialisasi storage saat engine dinyalakan
         storage.init();
         this.connection = new Connection(config.rpc.alchemyUrl, 'confirmed');
         this.checkInterval = null;
         this.pairEndpoint = 'https://api.dexscreener.com/latest/dex/pairs/solana/';
-        this.hasRecovered = false; // Flag untuk mencegah recovery berulang
-        
-        // Coba load posisi aktif yang tersimpan dari sesi sebelumnya (recovery)
-        // HANYA DILAKUKAN SEKALI SAAT BOT DINYALAKAN
+        this.hasRecovered = false;
+        this.isClosing = false;
+
         this.currentPosition = storage.loadActivePosition();
-        
-        // Jika ada posisi yang sedang berjalan, lanjutkan monitoring
+
         if (this.currentPosition) {
             console.log(chalk.yellow.bold('\n[RECOVERY] Melanjutkan monitoring posisi yang terbuka...'));
             this.startMonitoring();
-            this.hasRecovered = true; // Tandai bahwa recovery sudah dilakukan
+            this.hasRecovered = true;
         } else {
             this.currentPosition = null;
         }
     }
-    
-    /**
-     * Recovery posisi aktif dari sesi sebelumnya - HANYA DIPANGGIL SEKALI DI AWAL
-     */
+
     recoverOpenPosition() {
         if (this.hasRecovered) {
             console.log(chalk.gray('[Recovery] Recovery sudah dilakukan sebelumnya, melewatkan...'));
             return;
         }
-        
+
         const recoveredPosition = storage.loadActivePosition();
         if (recoveredPosition) {
             this.currentPosition = recoveredPosition;
@@ -73,123 +67,81 @@ class EngineService {
         }
     }
 
-    /**
-     * Mengecek apakah ada wallet yang memonopoli supply token
-     * Menggunakan Alchemy RPC getTokenLargestAccounts
-     */
     async checkWalletMonopoly(tokenAddress) {
         try {
             console.log(chalk.cyan(`\\n[Monopoly Check] 🔍 Menganalisis distribusi wallet untuk ${tokenAddress}...`));
-            
+
             const response = await axios.post(config.rpc.alchemyUrl, {
-                jsonrpc: "2.0",
+                jsonrpc: '2.0',
                 id: 1,
-                method: "getTokenLargestAccounts",
+                method: 'getTokenLargestAccounts',
                 params: [tokenAddress]
             }, {
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 timeout: 5000
             });
 
             if (!response.data || !response.data.result || !response.data.result.value) {
                 console.log(chalk.yellow('[Monopoly Check] ⚠️ Gagal mendapatkan data wallet terbesar.'));
-                return false; // Gagal cek, anggap aman agar tidak reject false positive
+                return false;
             }
 
-            const largestAccounts = response.data.result.value;
-            
-            // Filter out mint authority dan program accounts jika ada
-            const topHolders = largestAccounts.slice(0, 10); // Ambil 10 teratas
-            
+            const topHolders = response.data.result.value.slice(0, 10);
             let totalSupply = 0;
             let topHolderAmount = 0;
-            
-            topHolders.forEach(account => {
+
+            topHolders.forEach((account, index) => {
                 const amount = parseFloat(account.amount);
                 totalSupply += amount;
-                if (topHolders.indexOf(account) === 0) {
-                    topHolderAmount = amount;
-                }
+                if (index === 0) topHolderAmount = amount;
             });
 
-            // Hitung persentase kepemilikan wallet terbesar
-            const monopolyPercent = (topHolderAmount / totalSupply) * 100;
-            
+            const monopolyPercent = totalSupply > 0 ? (topHolderAmount / totalSupply) * 100 : 0;
+
             console.log(chalk.gray(`   Top 10 holders: ${totalSupply.toFixed(0)} tokens`));
             console.log(chalk.gray(`   Wallet #1 memegang: ${topHolderAmount.toFixed(0)} tokens (${monopolyPercent.toFixed(2)}%)`));
 
-            // Jika wallet terbesar memegang lebih dari 30% dari top 10 holders, anggap monopoli
             const MONOPOLY_THRESHOLD = 70;
-            
             if (monopolyPercent > MONOPOLY_THRESHOLD) {
                 console.log(chalk.red.bold(`   ⚠️ WARNING: Wallet terbesar mengontrol ${monopolyPercent.toFixed(2)}% supply!`));
-                activityLogger.log('MONOPOLY_DETECTED', { 
-                    token: tokenAddress, 
-                    monopolyPercent: monopolyPercent.toFixed(2) 
-                });
+                activityLogger.log('MONOPOLY_DETECTED', { token: tokenAddress, monopolyPercent: monopolyPercent.toFixed(2) });
                 return true;
             }
 
             console.log(chalk.green(`   ✅ Distribusi wallet sehat (${monopolyPercent.toFixed(2)}%)`));
             return false;
-
         } catch (error) {
             console.log(chalk.yellow(`[Monopoly Check] ⚠️ Error mengecek wallet: ${error.message}`));
-            activityLogger.log('MONOPOLY_CHECK_ERROR', { 
-                token: tokenAddress, 
-                error: error.message 
-            });
-            // Jika error, anggap aman (false) agar tidak reject token karena error teknis
+            activityLogger.log('MONOPOLY_CHECK_ERROR', { token: tokenAddress, error: error.message });
             return false;
         }
     }
 
-    /**
-     * Mengecek Wash Trading menggunakan Gecko Terminal API
-     * Kriteria:
-     * 1. Rata-rata transaksi < $2 = 100% fake volume (bot)
-     * 2. Unique Buyers terlalu sedikit dibanding total transaksi beli (misal: 100 transaksi tapi cuma 2 unique buyers)
-     */
     async checkWashTrading(tokenAddress, pairAddress) {
         try {
             console.log(chalk.cyan(`\\n[Wash Trading Check] 🔍 Menganalisis aktivitas trading untuk ${tokenAddress}...`));
-            
-            // Gunakan Gecko Terminal API untuk mendapatkan data pool dan transaksi
-            // Endpoint: https://api.geckoterminal.com/api/v2/networks/solana/pools/{pool_address}
+
             const geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pairAddress}`;
-            
             const response = await axios.get(geckoUrl, {
-                headers: {
-                    'Accept': 'application/json'
-                },
+                headers: { Accept: 'application/json' },
                 timeout: 8000
             });
 
             if (!response.data || !response.data.data) {
                 console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data pool dari Gecko Terminal.'));
-                return false; // Gagal cek, anggap aman
+                return false;
             }
 
-            const poolData = response.data.data;
-            const attributes = poolData.attributes || {};
-            
-            // Ambil data transaksi dari relationships jika tersedia, atau gunakan data pool
+            const attributes = response.data.data.attributes || {};
             const txCount = attributes.txns ? attributes.txns.m5.buys : 0;
             const volumeUsd = attributes.volume_usd || 0;
             const uniqueBuyersM5 = attributes.unique_buyers_m5 || 0;
-            
-            // Jika tidak ada data transaksi 5 menit, coba ambil dari field lain
+
             const totalBuyTransactions = txCount > 0 ? txCount : (attributes.transactions_5m || 0);
             const totalVolumeUsd = parseFloat(volumeUsd) || 0;
             const uniqueBuyersCount = uniqueBuyersM5 > 0 ? uniqueBuyersM5 : (attributes.unique_traders_m5 || 0);
-
-            // Hitung rata-rata nilai per transaksi
-            const avgTransactionValue = totalBuyTransactions > 0 ? (totalVolumeUsd / totalBuyTransactions) : 0;
-            
-            // Hitung rasio transaksi per unique buyer
-            const transactionsPerBuyer = uniqueBuyersCount > 0 ? (totalBuyTransactions / uniqueBuyersCount) : 0;
+            const avgTransactionValue = totalBuyTransactions > 0 ? totalVolumeUsd / totalBuyTransactions : 0;
+            const transactionsPerBuyer = uniqueBuyersCount > 0 ? totalBuyTransactions / uniqueBuyersCount : 0;
 
             console.log(chalk.gray(`   Total Transaksi Beli (5m): ${totalBuyTransactions}`));
             console.log(chalk.gray(`   Unique Buyers (5m): ${uniqueBuyersCount}`));
@@ -197,13 +149,9 @@ class EngineService {
             console.log(chalk.gray(`   Rata-rata per Transaksi: $${avgTransactionValue.toFixed(2)}`));
             console.log(chalk.gray(`   Transaksi per Buyer: ${transactionsPerBuyer.toFixed(1)}`));
 
-            // --- KRITERIA WASH TRADING ---
-            
-            // 1. Rata-rata transaksi terlalu kecil (< $2) = indikasi bot/fake volume
-            const MIN_AVG_TRANSACTION = 2; // Dollar
-            if (avgTransactionValue < MIN_AVG_TRANSACTION && totalBuyTransactions > 5) {
+            if (avgTransactionValue < 2 && totalBuyTransactions > 5) {
                 console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: Rata-rata transaksi hanya $${avgTransactionValue.toFixed(2)} (Fake Volume!)`));
-                activityLogger.log('WASH_TRADING_DETECTED', { 
+                activityLogger.log('WASH_TRADING_DETECTED', {
                     token: tokenAddress,
                     reason: 'low_avg_transaction',
                     avgTransactionValue: avgTransactionValue.toFixed(2),
@@ -214,13 +162,9 @@ class EngineService {
                 return true;
             }
 
-            // 2. Terlalu banyak transaksi dari sedikit unique buyers
-            // Contoh: 100 transaksi dari 2 wallet = 50 transaksi/wallet = pasti bot
-            const MAX_TRANSACTIONS_PER_BUYER = 20; // Jika 1 wallet melakukan > 20 transaksi dalam periode singkat = suspicious
-            
-            if (transactionsPerBuyer > MAX_TRANSACTIONS_PER_BUYER && totalBuyTransactions > 10) {
+            if (transactionsPerBuyer > 20 && totalBuyTransactions > 10) {
                 console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: ${transactionsPerBuyer.toFixed(1)} transaksi per buyer (Bot Activity!)`));
-                activityLogger.log('WASH_TRADING_DETECTED', { 
+                activityLogger.log('WASH_TRADING_DETECTED', {
                     token: tokenAddress,
                     reason: 'high_transactions_per_buyer',
                     transactionsPerBuyer: transactionsPerBuyer.toFixed(1),
@@ -230,14 +174,10 @@ class EngineService {
                 return true;
             }
 
-            // 3. Cek rasio unique buyers terhadap total transaksi
-            // Jika unique buyers < 10% dari total transaksi, sangat suspicious
-            const buyerRatio = uniqueBuyersCount / totalBuyTransactions;
-            const MIN_BUYER_RATIO = 0.1; // 10%
-            
-            if (buyerRatio < MIN_BUYER_RATIO && totalBuyTransactions > 10) {
+            const buyerRatio = totalBuyTransactions > 0 ? uniqueBuyersCount / totalBuyTransactions : 0;
+            if (buyerRatio < 0.1 && totalBuyTransactions > 10) {
                 console.log(chalk.red.bold(`   ⚠️ WASH TRADING DETECTED: Hanya ${uniqueBuyersCount} unique buyers dari ${totalBuyTransactions} transaksi!`));
-                activityLogger.log('WASH_TRADING_DETECTED', { 
+                activityLogger.log('WASH_TRADING_DETECTED', {
                     token: tokenAddress,
                     reason: 'low_unique_buyer_ratio',
                     buyerRatio: buyerRatio.toFixed(3),
@@ -249,205 +189,174 @@ class EngineService {
 
             console.log(chalk.green(`   ✅ Aktivitas trading terlihat natural (${uniqueBuyersCount} unique buyers, avg $${avgTransactionValue.toFixed(2)}/tx)`));
             return false;
-
         } catch (error) {
             console.log(chalk.yellow(`[Wash Trading Check] ⚠️ Error mengecek wash trading: ${error.message}`));
-            activityLogger.log('WASH_TRADING_CHECK_ERROR', { 
-                token: tokenAddress, 
-                error: error.message 
-            });
-            // Jika error, anggap aman (false) agar tidak reject token karena error teknis
+            activityLogger.log('WASH_TRADING_CHECK_ERROR', { token: tokenAddress, error: error.message });
             return false;
         }
     }
 
     async observeAndConfirm(token) {
-        activityLogger.log("OBSERVATION_START", { symbol: token.baseToken.symbol });
+        activityLogger.log('OBSERVATION_START', { symbol: token.baseToken.symbol });
         const obs = config.observation;
         console.log(chalk.cyan(`\n[Observer] 🕵️ Menunda Entry. Mengawasi ${token.baseToken.symbol} selama ${obs.durationSeconds} detik...`));
 
-        let prices = [];
-        // Ubah interval menjadi 1 detik untuk data lebih real-time selama observasi
-        const realTimeInterval = 1; 
+        const prices = [];
+        const realTimeInterval = 1;
         const iterations = Math.floor(obs.durationSeconds / realTimeInterval);
 
         for (let i = 0; i < iterations; i++) {
             const currentPrice = await this.getCurrentPrice(token.pairAddress, true);
             if (currentPrice) prices.push(currentPrice);
-
-            // Tampilkan indikator loading di terminal
             process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length}/${iterations} detik...\r`));
-
             await new Promise(resolve => setTimeout(resolve, realTimeInterval * 1000));
         }
 
         if (prices.length < 3) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.`));
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.'));
             return false;
         }
 
-        // --- FILTER DOMINASI WALLET (MONOPOLI CEK) ---
         const isMonopolized = await this.checkWalletMonopoly(token.baseToken.address);
         if (isMonopolized) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Terdeteksi monopoli wallet pada token ini.`));
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Terdeteksi monopoli wallet pada token ini.'));
             return false;
         }
 
-        // --- FILTER WASH TRADING (BOT ACTIVITY CEK) ---
         const isWashTrading = await this.checkWashTrading(token.baseToken.address, token.pairAddress);
         if (isWashTrading) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Terdeteksi Wash Trading / Bot Activity pada token ini.`));
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Terdeteksi Wash Trading / Bot Activity pada token ini.'));
             return false;
         }
 
-        // --- ANALISIS STRUKTUR PASAR (SIMPLIFIED) ---
         const startPrice = prices[0];
         const endPrice = prices[prices.length - 1];
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
 
-        // 1. Syarat Trend: Harga akhir harus lebih tinggi dari harga awal (uptrend dasar)
-        // Longgarkan: boleh flat atau sedikit negatif asal tidak > -3%
         const trendPercent = ((endPrice - startPrice) / startPrice) * 100;
         if (trendPercent < -3) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Trend negatif (${trendPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // 2. Syarat Stabilitas: Tidak ada dump ekstrem (> maxDumpPercent)
-        // Longgarkan dari 15% ke 25% agar tidak menolak token volatile
         const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
         if (maxDropPercent > 25) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas terlalu tinggi (${maxDropPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // 3. Syarat Entry: Harga tidak sedang di pucuk (allow some pullback)
-        // Longgarkan dari 5% ke 10% untuk memberikan ruang entry lebih besar
         const fromPeakPercent = ((maxPrice - endPrice) / maxPrice) * 100;
         if (fromPeakPercent > 10) {
             console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Harga turun terlalu jauh dari puncak (${fromPeakPercent.toFixed(2)}%).`));
             return false;
         }
 
-        // --- HITUNG VOLATILITAS UNTUK DYNAMIC TRAILING STOP & TAKE PROFIT ---
-        // Hitung standar deviasi dari perubahan harga persentase
         const priceChanges = [];
         for (let i = 1; i < prices.length; i++) {
-            const change = ((prices[i] - prices[i-1]) / prices[i-1]) * 100;
-            priceChanges.push(change);
+            priceChanges.push(((prices[i] - prices[i - 1]) / prices[i - 1]) * 100);
         }
-        
-        // Hitung mean (rata-rata perubahan harga)
         const meanChange = priceChanges.reduce((a, b) => a + b, 0) / priceChanges.length;
-        
-        // Hitung standar deviasi (volatilitas)
         const variance = priceChanges.reduce((a, b) => a + Math.pow(b - meanChange, 2), 0) / priceChanges.length;
         const volatility = Math.sqrt(variance);
-        
-        // Simpan volatilitas untuk digunakan saat openPosition
+
         token.volatility = volatility;
         token.priceRange = maxDropPercent;
-        
-        console.log(chalk.green.bold(`\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY!`));
+
+        console.log(chalk.green.bold('\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY via Jupiter quote!'));
         console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
         console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per detik`));
         return true;
     }
 
-    /**
-     * Membuka posisi baru (Paper Trade Buy)
-     */
     async openPosition(token) {
         if (this.currentPosition) {
-            console.log(chalk.yellow("Percobaan membuka posisi ditolak: Masih ada trade yang berjalan."));
+            console.log(chalk.yellow('Percobaan membuka posisi ditolak: Masih ada trade yang berjalan.'));
             return;
         }
 
-        const price = parseFloat(token.priceUsd);
-        
-        // --- HITUNG DYNAMIC TRAILING STOP & TAKE PROFIT BERDASARKAN VOLATILITAS ---
-        // Gunakan volatilitas yang dihitung selama fase observasi
+        const tokenDecimals = token.baseToken.decimals || token.info?.decimals || config.trading.defaultTokenDecimals || 6;
+        let buyExecution;
+
+        try {
+            console.log(chalk.cyan(`\n[Jupiter BUY] Mengambil quote entry untuk ${token.baseToken.symbol}...`));
+            buyExecution = await jupiter.getBuyExecution(token.baseToken.address, config.trading.positionSize, tokenDecimals);
+        } catch (error) {
+            console.log(chalk.red(`[Jupiter BUY] Entry ditolak: ${error.message}`));
+            activityLogger.log('JUPITER_BUY_QUOTE_FAILED', {
+                symbol: token.baseToken.symbol,
+                address: token.baseToken.address,
+                error: error.message
+            });
+            return;
+        }
+
+        const price = buyExecution.entryPriceUsd;
         const volatility = token.volatility || 0;
         const priceRange = token.priceRange || 0;
-        
-        // Logika Dynamic Trailing Stop:
-        // - Volatilitas tinggi (> 1% per detik): trailingStop = 8% (lebih longgar)
-        // - Volatilitas sedang (0.5% - 1%): trailingStop = 5% 
-        // - Volatilitas rendah (< 0.5%): trailingStop = 2% (lebih ketat)
+
         let dynamicTrailingStopPercent;
-        if (volatility > 1.0) {
-            dynamicTrailingStopPercent = 8; // Koin liar, trailing stop lebar
-        } else if (volatility >= 0.5) {
-            dynamicTrailingStopPercent = 5; // Volatilitas sedang
-        } else {
-            dynamicTrailingStopPercent = 2; // Koin stabil, trailing stop ketat
-        }
-        
-        // Logika Dynamic Take Profit:
-        // - Volatilitas tinggi: targetProfit = 15% (beri ruang lebih besar untuk profit)
-        // - Volatilitas sedang: targetProfit = 10%
-        // - Volatilitas rendah: targetProfit = 7% (cepat ambil profit)
+        if (volatility > 1.0) dynamicTrailingStopPercent = 8;
+        else if (volatility >= 0.5) dynamicTrailingStopPercent = 5;
+        else dynamicTrailingStopPercent = 2;
+
         let dynamicTargetProfitPercent;
-        if (volatility > 1.0) {
-            dynamicTargetProfitPercent = 15;
-        } else if (volatility >= 0.5) {
-            dynamicTargetProfitPercent = 10;
-        } else {
-            dynamicTargetProfitPercent = 7;
-        }
-        
+        if (volatility > 1.0) dynamicTargetProfitPercent = 15;
+        else if (volatility >= 0.5) dynamicTargetProfitPercent = 10;
+        else dynamicTargetProfitPercent = 7;
+
         console.log(chalk.cyan(`\n[Volatility Analysis] Volatilitas: ${volatility.toFixed(4)}% | Price Range: ${priceRange.toFixed(2)}%`));
         console.log(chalk.green(`   Dynamic Trailing Stop: ${dynamicTrailingStopPercent}%`));
         console.log(chalk.green(`   Dynamic Take Profit: ${dynamicTargetProfitPercent}%`));
+        console.log(chalk.cyan(`[Jupiter BUY] Entry Price: $${price.toFixed(12)} | Price Impact: ${buyExecution.priceImpactPct}% | Est. Fee: ${buyExecution.estimatedFeeSol} SOL`));
 
         this.currentPosition = {
             symbol: token.baseToken.symbol,
-            address: token.baseToken.address, // CA Token
+            address: token.baseToken.address,
             pairAddress: token.pairAddress,
+            tokenDecimals,
+            entrySource: buyExecution.source,
             entryPrice: price,
-            maxPrice: price, // Digunakan untuk kalkulasi Trailing Stop
+            maxPrice: price,
             positionSize: config.trading.positionSize,
+            tokenAmount: buyExecution.tokenAmount,
+            tokenAmountRaw: buyExecution.tokenOutRaw,
+            entrySolValue: config.trading.positionSize,
+            entryUsdValue: buyExecution.solUsdValue,
+            entryPriceImpactPct: buyExecution.priceImpactPct,
+            entryEstimatedFeeSol: buyExecution.estimatedFeeSol,
+            totalEstimatedFeesSol: buyExecution.estimatedFeeSol,
             openedAt: new Date().toISOString(),
-            // Simpan parameter dinamis untuk digunakan saat monitoring
-            dynamicTrailingStopPercent: dynamicTrailingStopPercent,
-            dynamicTargetProfitPercent: dynamicTargetProfitPercent,
-            volatility: volatility
+            dynamicTrailingStopPercent,
+            dynamicTargetProfitPercent,
+            volatility
         };
 
-        // Simpan posisi aktif ke file untuk recovery
         storage.saveActivePosition(this.currentPosition);
 
         console.log(chalk.green.bold(`\n[BUY] Mengunci target: ${this.currentPosition.symbol}`));
-        console.log(chalk.gray(`Entry Price: $${this.currentPosition.entryPrice}`));
+        console.log(chalk.gray(`Entry Price Jupiter: $${this.currentPosition.entryPrice}`));
+        console.log(chalk.gray(`Token Amount: ${this.currentPosition.tokenAmount}`));
 
-        // Kirim Notifikasi Telegram
         await telegram.notifyTrade('BUY', {
             symbol: this.currentPosition.symbol,
             price: this.currentPosition.entryPrice,
             address: this.currentPosition.address
         });
 
-        // Jalankan monitoring harga secara intensif
         this.startMonitoring();
     }
 
-    /**
-     * Loop Monitoring Harga menggunakan Polling (1 detik)
-     */
     startMonitoring() {
         console.log(chalk.blue(`Memulai monitoring via polling setiap 1 detik untuk ${this.currentPosition.symbol}...`));
         this.fallbackToPolling();
     }
 
-    /**
-     * Fallback ke polling jika WebSocket gagal
-     */
     fallbackToPolling() {
         if (this.checkInterval || !this.currentPosition) return;
 
         console.log(chalk.yellow('Mengaktifkan polling setiap 1 detik...'));
-        
+
         this.checkInterval = setInterval(async () => {
             try {
                 if (!this.currentPosition) {
@@ -456,31 +365,25 @@ class EngineService {
                 }
 
                 const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress);
-
                 if (!currentPrice) {
-                    console.log(chalk.red("Gagal mendapatkan harga terbaru, mencoba lagi..."));
+                    console.log(chalk.red('Gagal mendapatkan harga terbaru, mencoba lagi...'));
                     return;
                 }
 
-                // Kalkulasi PNL saat ini
                 const pnl = ((currentPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
 
-                // Update harga tertinggi (untuk Trailing Stop)
                 if (currentPrice > this.currentPosition.maxPrice) {
                     this.currentPosition.maxPrice = currentPrice;
                 }
 
-                // Kalkulasi PNL dari titik tertinggi (Peak PNL)
                 const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-
-                process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}%    `));
+                process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: Indicative PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}%    `));
 
                 this.checkExitConditions(currentPrice, pnl, maxPnl);
-
             } catch (error) {
-                console.error(chalk.red("\nError Monitoring:"), error.message);
+                console.error(chalk.red('\nError Monitoring:'), error.message);
             }
-        }, 1000); // Polling setiap 1 detik
+        }, 1000);
     }
 
     stopMonitoring() {
@@ -490,134 +393,145 @@ class EngineService {
         }
     }
 
-    /**
-     * Logika Exit: Take Profit, Stop Loss, dan Trailing Stop
-     */
     checkExitConditions(currentPrice, pnl, maxPnl) {
+        if (this.isClosing) return;
+
         const c = config.trading;
-        
-        // Gunakan parameter dinamis jika tersedia (dari perhitungan volatilitas)
-        // Jika tidak ada (posisi lama sebelum update), gunakan nilai default dari config
         const targetProfitPercent = this.currentPosition.dynamicTargetProfitPercent || c.targetProfitPercent;
         const trailingStopPercent = this.currentPosition.dynamicTrailingStopPercent || c.trailingStopPercent;
-        const trailingStartPercent = c.trailingStartPercent; // Tetap gunakan config untuk trigger awal
+        const trailingStartPercent = c.trailingStartPercent;
 
-        // 1. DYNAMIC HARD TAKE PROFIT
-        // Menggunakan target profit yang disesuaikan dengan volatilitas
         if (pnl >= targetProfitPercent) {
             this.closePosition(currentPrice, pnl, `🚀 Moon Target Reached (${targetProfitPercent}%)`);
             return;
         }
 
-        // 2. PROFIT LOCK AT 6% (Kunci Profit)
-        // Jika profit pernah menyentuh >= 6% lalu turun di bawah 6%, langsung jual untuk mengamankan profit
         if (maxPnl >= 6 && pnl < 6) {
             this.closePosition(currentPrice, pnl, `🔒 Profit Lock: Turun di bawah 6% (Locked ${pnl.toFixed(2)}%)`);
             return;
         }
 
-        // 3. DYNAMIC TRAILING STOP (The "Profit Locker")
-        // Cek apakah profit sudah melewati ambang batas aktivasi (misal 5%)
         if (pnl >= trailingStartPercent) {
-            const trailThreshold = this.currentPosition.maxPrice * (1 - (trailingStopPercent / 100));
-
+            const trailThreshold = this.currentPosition.maxPrice * (1 - trailingStopPercent / 100);
             if (currentPrice <= trailThreshold) {
                 this.closePosition(currentPrice, pnl, `🛡️ Trailing Stop: Locked at ${pnl.toFixed(2)}% (Dynamic ${trailingStopPercent}%)`);
                 return;
             }
         }
 
-        // 4. HARD STOP LOSS (-5%)
         if (pnl <= -c.stopLossPercent) {
-            this.closePosition(currentPrice, pnl, "❌ Stop Loss Terkena");
+            this.closePosition(currentPrice, pnl, '❌ Stop Loss Terkena');
             return;
         }
 
-        // 5. TIME LIMIT (10 Menit)
-        // Jika 10 menit tidak ada pergerakan yang berarti, keluar dari trade
         const timeElapsed = (Date.now() - new Date(this.currentPosition.openedAt).getTime()) / (60 * 1000);
         if (timeElapsed >= c.timeLimitMinutes) {
-            this.closePosition(currentPrice, pnl, "⌛ Time Limit: No Significant Movement");
-            return;
+            this.closePosition(currentPrice, pnl, '⌛ Time Limit: No Significant Movement');
         }
     }
 
-    /**
-     * Menutup Posisi, Menyimpan Log, dan Reset State
-     */
-    async closePosition(price, pnl, reason) {
+    async closePosition(indicativePrice, indicativePnl, reason) {
+        if (this.isClosing || !this.currentPosition) return;
+        this.isClosing = true;
         this.stopMonitoring();
-        const cTrading = config.trading;
+
         const cRisk = config.riskManagement;
         const tokenAddress = this.currentPosition.address;
+        let sellExecution;
+
+        try {
+            console.log(chalk.cyan(`\n[Jupiter SELL] Mengambil quote exit untuk ${this.currentPosition.symbol}...`));
+            sellExecution = await jupiter.getSellExecution(
+                this.currentPosition.address,
+                this.currentPosition.tokenAmountRaw,
+                this.currentPosition.tokenDecimals
+            );
+        } catch (error) {
+            console.log(chalk.red(`[Jupiter SELL] Gagal mengambil quote exit: ${error.message}`));
+            activityLogger.log('JUPITER_SELL_QUOTE_FAILED', {
+                symbol: this.currentPosition.symbol,
+                address: this.currentPosition.address,
+                error: error.message
+            });
+            this.startMonitoring();
+            this.isClosing = false;
+            return;
+        }
+
+        const grossProfitSol = sellExecution.exitSolAmount - this.currentPosition.entrySolValue;
+        const totalEstimatedFeesSol = (this.currentPosition.entryEstimatedFeeSol || 0) + sellExecution.estimatedFeeSol;
+        const netProfitSol = grossProfitSol - totalEstimatedFeesSol;
+        const grossPnl = (grossProfitSol / this.currentPosition.entrySolValue) * 100;
+        const netPnl = (netProfitSol / this.currentPosition.entrySolValue) * 100;
 
         const tradeData = {
             ...this.currentPosition,
-            exitPrice: price,
-            pnl: pnl,
-            reason: reason,
+            exitSource: sellExecution.source,
+            exitPrice: sellExecution.exitPriceUsd,
+            indicativeExitPrice: indicativePrice,
+            indicativePnl,
+            grossPnl,
+            pnl: netPnl,
+            grossProfitSol,
+            netProfitSol,
+            exitSolAmount: sellExecution.exitSolAmount,
+            exitUsdValue: sellExecution.exitUsdValue,
+            exitPriceImpactPct: sellExecution.priceImpactPct,
+            exitEstimatedFeeSol: sellExecution.estimatedFeeSol,
+            totalEstimatedFeesSol,
+            reason,
             closedAt: new Date().toISOString()
         };
 
         try {
-            const stats = storage.saveTrade(tradeData);
+            storage.saveTrade(tradeData);
 
-            // --- LOGIKA MANAJEMEN RISIKO (PENALTI & COOLDOWN) ---
             let state = storage.getState();
             if (!state.tokenStats[tokenAddress]) {
                 state.tokenStats[tokenAddress] = { slCount: 0, cooldownUntil: 0, blacklisted: false };
             }
-            let tState = state.tokenStats[tokenAddress];
+            const tState = state.tokenStats[tokenAddress];
+            let alertMsg = '';
 
-            let alertMsg = "";
-
-            if (pnl < 0) {
+            if (netPnl < 0) {
                 state.consecutiveLosses += 1;
                 tState.slCount += 1;
 
-                // 1. Brutal Rugpull Check
-                if (pnl <= cRisk.rugpullThresholdPercent) {
+                if (netPnl <= cRisk.rugpullThresholdPercent) {
                     tState.blacklisted = true;
-                    alertMsg = `🚨 *RUGPULL DETECTED* (${pnl.toFixed(2)}%). Koin di-blacklist permanen!`;
-                }
-                // 2. SL 2x Check
-                else if (tState.slCount >= 2) {
-                    tState.cooldownUntil = Date.now() + (cRisk.slCooldown2xMinutes * 60 * 1000);
+                    alertMsg = `🚨 *RUGPULL DETECTED* (${netPnl.toFixed(2)}%). Koin di-blacklist permanen!`;
+                } else if (tState.slCount >= 2) {
+                    tState.cooldownUntil = Date.now() + cRisk.slCooldown2xMinutes * 60 * 1000;
                     alertMsg = `⏸️ *Kena SL 2x*. Blacklist koin ini ${cRisk.slCooldown2xMinutes} menit.`;
-                }
-                // 3. SL 1x Check
-                else {
-                    tState.cooldownUntil = Date.now() + (cRisk.slCooldown1xMinutes * 60 * 1000);
+                } else {
+                    tState.cooldownUntil = Date.now() + cRisk.slCooldown1xMinutes * 60 * 1000;
                     alertMsg = `⏳ *Kena SL 1x*. Koin di-cooldown ${cRisk.slCooldown1xMinutes} menit.`;
                 }
 
-                // 4. Global Pause (Beruntun Loss)
                 if (state.consecutiveLosses >= cRisk.maxConsecutiveLosses) {
-                    state.globalPauseUntil = Date.now() + (cRisk.globalPauseMinutes * 60 * 1000);
-                    state.consecutiveLosses = 0; // Reset counter
+                    state.globalPauseUntil = Date.now() + cRisk.globalPauseMinutes * 60 * 1000;
+                    state.consecutiveLosses = 0;
                     await telegram.sendMessage(`🛑 *GLOBAL PAUSE DIAKTIFKAN*\nBot mengalami loss ${cRisk.maxConsecutiveLosses}x berturut-turut. Scanner dihentikan selama ${cRisk.globalPauseMinutes} menit untuk menghindari kondisi pasar yang buruk.`);
                 }
             } else {
-                // Jika Profit, reset consecutive losses global
                 state.consecutiveLosses = 0;
-                // Berikan cooldown normal 5 menit agar tidak langsung FOMO re-entry
-                tState.cooldownUntil = Date.now() + (5 * 60 * 1000);
+                tState.cooldownUntil = Date.now() + 5 * 60 * 1000;
             }
 
-            storage.saveState(state); // Simpan status terbaru
+            storage.saveState(state);
 
-            // --- NOTIFIKASI TELEGRAM ---
+            console.log(chalk.green.bold(`\n[SELL] ${this.currentPosition.symbol} ditutup via Jupiter quote.`));
+            console.log(chalk.gray(`Gross PNL: ${grossPnl.toFixed(2)}% | Net PNL after fees: ${netPnl.toFixed(2)}%`));
+            console.log(chalk.gray(`Estimated Fees: ${totalEstimatedFeesSol} SOL`));
+
             await telegram.notifyTrade('SELL', tradeData);
-            if (alertMsg !== "") {
-                await telegram.sendMessage(alertMsg);
-            }
-
+            if (alertMsg !== '') await telegram.sendMessage(alertMsg);
         } catch (error) {
-            console.error("Gagal menutup posisi:", error.message);
+            console.error('Gagal menutup posisi:', error.message);
         } finally {
             this.currentPosition = null;
-            // Reset flag recovery agar bisa recovery lagi jika bot restart di sesi berikutnya
             this.hasRecovered = false;
+            this.isClosing = false;
         }
     }
 }
