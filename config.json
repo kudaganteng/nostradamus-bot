@@ -16,6 +16,9 @@
     "requoteAfterLatency": true,
     "rejectIfQuoteWorsensPct": 5
   },
+  "monitoring": {
+    "quoteRefreshMs": 5000
+  },
   "costs": {
     "estimatedSwapFeeSol": 0.000005,
     "estimatedPriorityFeeSol": 0.00005
