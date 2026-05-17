@@ -56,6 +56,12 @@ class EngineService {
         };
     }
 
+    getMonitoringConfig() {
+        return {
+            quoteRefreshMs: config.monitoring?.quoteRefreshMs ?? 5000
+        };
+    }
+
     getRandomLatencyMs() {
         const exec = this.getExecutionConfig();
         const min = Math.max(0, Number(exec.minLatencyMs));
@@ -108,6 +114,25 @@ class EngineService {
             }
             return null;
         }
+    }
+
+    async getIndicativePriceFromJupiterQuote() {
+        if (!this.currentPosition?.tokenAmountRaw || !this.currentPosition?.tokenDecimals) {
+            throw new Error('Data posisi tidak lengkap untuk refresh quote Jupiter.');
+        }
+
+        const quote = await jupiter.getSellExecution(
+            this.currentPosition.address,
+            this.currentPosition.tokenAmountRaw,
+            this.currentPosition.tokenDecimals
+        );
+
+        return {
+            price: quote.exitPriceUsd,
+            exitSolAmount: quote.exitSolAmount,
+            priceImpactPct: quote.priceImpactPct,
+            quote
+        };
     }
 
     async checkWalletMonopoly(tokenAddress) {
@@ -418,14 +443,16 @@ class EngineService {
     }
 
     startMonitoring() {
-        console.log(chalk.blue(`Memulai monitoring via polling setiap 1 detik untuk ${this.currentPosition.symbol}...`));
+        const refreshMs = this.getMonitoringConfig().quoteRefreshMs;
+        console.log(chalk.blue(`Memulai monitoring via Jupiter quote setiap ${refreshMs / 1000} detik untuk ${this.currentPosition.symbol}...`));
         this.fallbackToPolling();
     }
 
     fallbackToPolling() {
         if (this.checkInterval || !this.currentPosition) return;
 
-        console.log(chalk.yellow('Mengaktifkan polling setiap 1 detik...'));
+        const refreshMs = this.getMonitoringConfig().quoteRefreshMs;
+        console.log(chalk.yellow(`Mengaktifkan refresh quote Jupiter setiap ${refreshMs / 1000} detik...`));
 
         this.checkInterval = setInterval(async () => {
             try {
@@ -434,9 +461,11 @@ class EngineService {
                     return;
                 }
 
-                const currentPrice = await this.getCurrentPrice(this.currentPosition.pairAddress);
+                const quoteSnapshot = await this.getIndicativePriceFromJupiterQuote();
+                const currentPrice = quoteSnapshot.price;
+
                 if (!currentPrice) {
-                    console.log(chalk.red('Gagal mendapatkan harga terbaru, mencoba lagi...'));
+                    console.log(chalk.red('Gagal mendapatkan harga quote Jupiter terbaru, mencoba lagi...'));
                     return;
                 }
 
@@ -447,13 +476,13 @@ class EngineService {
                 }
 
                 const maxPnl = ((this.currentPosition.maxPrice - this.currentPosition.entryPrice) / this.currentPosition.entryPrice) * 100;
-                process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: Indicative PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}%    `));
+                process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: Jupiter Quote PNL ${pnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Impact ${quoteSnapshot.priceImpactPct}%    `));
 
                 this.checkExitConditions(currentPrice, pnl, maxPnl);
             } catch (error) {
-                console.error(chalk.red('\nError Monitoring:'), error.message);
+                console.error(chalk.red('\nError refresh quote Jupiter:'), error.message);
             }
-        }, 1000);
+        }, refreshMs);
     }
 
     stopMonitoring() {
