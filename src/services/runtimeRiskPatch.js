@@ -6,6 +6,22 @@ function n(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function hasExplicitRuntimeUpdate(settings) {
+  return settings?.updatedBy === 'telegram' && Boolean(settings?.updatedAt);
+}
+
+function applyRuntimeOverrides(profile, settings) {
+  if (!hasExplicitRuntimeUpdate(settings)) return profile;
+
+  return {
+    ...profile,
+    targetProfitPercent: n(settings.targetProfitPercent, profile.targetProfitPercent),
+    stopLossPercent: n(settings.stopLossPercent, profile.stopLossPercent),
+    trailingStartPercent: n(settings.trailingStartPercent, profile.trailingStartPercent),
+    trailingStopPercent: n(settings.trailingStopPercent, profile.trailingStopPercent)
+  };
+}
+
 function applyRuntimeRiskPatch(engine) {
   if (!engine || engine.__runtimeRiskPatchApplied) return engine;
 
@@ -16,6 +32,8 @@ function applyRuntimeRiskPatch(engine) {
   engine.applyRuntimeSettingsToCurrentPosition = function applyRuntimeSettingsToCurrentPosition() {
     if (!this.currentPosition) return null;
     const settings = storage.getRuntimeSettings();
+    if (!hasExplicitRuntimeUpdate(settings)) return this.currentPosition;
+
     this.currentPosition.dynamicTargetProfitPercent = n(settings.targetProfitPercent, config.trading.targetProfitPercent);
     this.currentPosition.dynamicStopLossPercent = n(settings.stopLossPercent, config.trading.stopLossPercent);
     this.currentPosition.dynamicTrailingStartPercent = n(settings.trailingStartPercent, config.trading.trailingStartPercent);
@@ -36,14 +54,7 @@ function applyRuntimeRiskPatch(engine) {
           timeLimitMinutes: config.trading.timeLimitMinutes
         };
 
-    const settings = storage.getRuntimeSettings();
-    return {
-      ...baseProfile,
-      targetProfitPercent: n(settings.targetProfitPercent, baseProfile.targetProfitPercent),
-      stopLossPercent: n(settings.stopLossPercent, baseProfile.stopLossPercent),
-      trailingStartPercent: n(settings.trailingStartPercent, baseProfile.trailingStartPercent),
-      trailingStopPercent: n(settings.trailingStopPercent, baseProfile.trailingStopPercent)
-    };
+    return applyRuntimeOverrides(baseProfile, storage.getRuntimeSettings());
   };
 
   engine.__runtimeRiskPatchApplied = true;
