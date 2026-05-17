@@ -497,6 +497,7 @@ class EngineService {
 
         const c = config.trading;
         const targetProfitPercent = this.currentPosition.dynamicTargetProfitPercent || c.targetProfitPercent;
+        const stopLossPercent = this.currentPosition.telegramStopLossPercent || c.stopLossPercent;
         const trailingStopPercent = this.currentPosition.dynamicTrailingStopPercent || c.trailingStopPercent;
         const trailingStartPercent = c.trailingStartPercent;
 
@@ -518,8 +519,8 @@ class EngineService {
             }
         }
 
-        if (pnl <= -c.stopLossPercent) {
-            this.closePosition(currentPrice, pnl, '❌ Stop Loss Terkena');
+        if (pnl <= -stopLossPercent) {
+            this.closePosition(currentPrice, pnl, `❌ Stop Loss Terkena (${stopLossPercent}%)`);
             return;
         }
 
