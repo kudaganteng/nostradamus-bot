@@ -609,7 +609,7 @@ class EngineService {
         try {
             storage.saveTrade(tradeData);
 
-            let state = storage.getState();
+            const state = storage.getState();
             if (!state.tokenStats[tokenAddress]) {
                 state.tokenStats[tokenAddress] = { slCount: 0, cooldownUntil: 0, blacklisted: false };
             }
@@ -617,7 +617,6 @@ class EngineService {
             let alertMsg = '';
 
             if (netPnl < 0) {
-                state.consecutiveLosses += 1;
                 tState.slCount += 1;
 
                 if (netPnl <= cRisk.rugpullThresholdPercent) {
@@ -630,14 +629,7 @@ class EngineService {
                     tState.cooldownUntil = Date.now() + cRisk.slCooldown1xMinutes * 60 * 1000;
                     alertMsg = `⏳ *Kena SL 1x*. Koin di-cooldown ${cRisk.slCooldown1xMinutes} menit.`;
                 }
-
-                if (state.consecutiveLosses >= cRisk.maxConsecutiveLosses) {
-                    state.globalPauseUntil = Date.now() + cRisk.globalPauseMinutes * 60 * 1000;
-                    state.consecutiveLosses = 0;
-                    await telegram.sendMessage(`🛑 *GLOBAL PAUSE DIAKTIFKAN*\nBot mengalami loss ${cRisk.maxConsecutiveLosses}x berturut-turut. Scanner dihentikan selama ${cRisk.globalPauseMinutes} menit untuk menghindari kondisi pasar yang buruk.`);
-                }
             } else {
-                state.consecutiveLosses = 0;
                 tState.cooldownUntil = Date.now() + 5 * 60 * 1000;
             }
 
