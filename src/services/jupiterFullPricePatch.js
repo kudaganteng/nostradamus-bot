@@ -131,12 +131,8 @@ function applyJupiterFullPricePatch(engine) {
     }
 
     const stats = priceStats(prices);
-    const minMomentumPercent = n(obs.minMomentumPercent, 0.5);
     const flatObservation = this.isFlatObservation(uniquePrices);
 
-    if (stats.momentumPercent < minMomentumPercent) {
-      return rejectObservation(token, `momentum kurang (${stats.momentumPercent.toFixed(2)}% < ${minMomentumPercent}%)`, stats);
-    }
     if (stats.momentumPercent < -3) return rejectObservation(token, 'momentum negatif lebih dari 3%', stats);
     if (stats.maxDropPercent > n(obs.maxDumpPercent, 22)) return rejectObservation(token, 'max dump terlalu besar', stats);
     if (stats.pullbackFromPeakPercent > n(obs.maxFromPeakPercent, 10)) return rejectObservation(token, 'pullback dari peak terlalu besar', stats);
@@ -161,7 +157,7 @@ function applyJupiterFullPricePatch(engine) {
       jupiterPullbackFromPeakPercent: stats.pullbackFromPeakPercent
     });
 
-    console.log(`\n[Observer] ✅ Jupiter confirmed. Momentum ${stats.momentumPercent.toFixed(2)}%, unique prices ${uniquePrices}.`);
+    console.log(`\n[Observer] ✅ Jupiter confirmed. Momentum gate off. Current momentum ${stats.momentumPercent.toFixed(2)}%, unique prices ${uniquePrices}.`);
     return true;
   };
 
