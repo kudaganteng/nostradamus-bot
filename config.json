@@ -56,6 +56,20 @@
     "preEntryQuoteAttempts": 2,
     "rejectIfJupiterPreEntryFails": true
   },
+  "gmgn": {
+    "enabled": true,
+    "timeoutMs": 5000,
+    "rejectOnError": false,
+    "rejectCooldownMinutes": 5,
+    "maxTop10HolderRate": 0.35,
+    "requireRenouncedMint": true,
+    "requireRenouncedFreeze": true,
+    "rejectHoneypot": true,
+    "maxBuyTax": 0,
+    "maxSellTax": 0,
+    "requireLaunchpadComplete": true,
+    "allowedLaunchpads": ["Pump.fun"]
+  },
   "paperExecution": {
     "enabled": true,
     "dynamicSlippage": true,
