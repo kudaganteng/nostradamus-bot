@@ -7,6 +7,7 @@ const TRADES_FILE = path.join(process.cwd(), 'paperTrades.json');
 const PORTFOLIO_FILE = path.join(process.cwd(), 'portfolio.json');
 const STATE_FILE = path.join(process.cwd(), 'botState.json');
 const POSITION_FILE = path.join(process.cwd(), 'activePosition.json');
+const RUNTIME_SETTINGS_FILE = path.join(process.cwd(), 'runtimeSettings.json');
 
 function readJson(filePath, fallback = null) {
     try {
@@ -43,6 +44,29 @@ function createInitialPortfolio() {
     };
 }
 
+function createInitialRuntimeSettings() {
+    return {
+        targetProfitPercent: Number(config.trading?.targetProfitPercent || 5),
+        stopLossPercent: Number(config.trading?.stopLossPercent || 7),
+        trailingStartPercent: Number(config.trading?.trailingStartPercent || 7),
+        trailingStopPercent: Number(config.trading?.trailingStopPercent || 3),
+        updatedAt: null,
+        updatedBy: 'config'
+    };
+}
+
+function normalizeRuntimeSettings(settings = {}) {
+    const base = createInitialRuntimeSettings();
+    return {
+        ...base,
+        ...settings,
+        targetProfitPercent: Number.isFinite(Number(settings.targetProfitPercent)) ? Number(settings.targetProfitPercent) : base.targetProfitPercent,
+        stopLossPercent: Number.isFinite(Number(settings.stopLossPercent)) ? Number(settings.stopLossPercent) : base.stopLossPercent,
+        trailingStartPercent: Number.isFinite(Number(settings.trailingStartPercent)) ? Number(settings.trailingStartPercent) : base.trailingStartPercent,
+        trailingStopPercent: Number.isFinite(Number(settings.trailingStopPercent)) ? Number(settings.trailingStopPercent) : base.trailingStopPercent
+    };
+}
+
 function shouldSyncEmptyPortfolio(portfolio) {
     if (!portfolio) return true;
     const hasNoTradeHistory = Number(portfolio.tradeCount || 0) === 0;
@@ -55,13 +79,12 @@ const Storage = {
     init() {
         try {
             if (!fs.existsSync(TRADES_FILE)) writeJson(TRADES_FILE, []);
+            if (!fs.existsSync(RUNTIME_SETTINGS_FILE)) writeJson(RUNTIME_SETTINGS_FILE, createInitialRuntimeSettings());
             if (!fs.existsSync(PORTFOLIO_FILE)) {
                 writeJson(PORTFOLIO_FILE, createInitialPortfolio());
             } else {
                 const portfolio = readJson(PORTFOLIO_FILE, null);
 
-                // Jika portfolio masih kosong tanpa trade, ikuti config.trading.paperBalance.
-                // Jika sudah ada trade, jangan reset agar histori paper trade tetap aman.
                 if (shouldSyncEmptyPortfolio(portfolio)) {
                     writeJson(PORTFOLIO_FILE, createInitialPortfolio());
                 }
@@ -89,6 +112,22 @@ const Storage = {
 
     saveState(state) {
         writeJson(STATE_FILE, state);
+    },
+
+    getRuntimeSettings() {
+        return normalizeRuntimeSettings(readJson(RUNTIME_SETTINGS_FILE, createInitialRuntimeSettings()));
+    },
+
+    saveRuntimeSettings(settings, updatedBy = 'telegram') {
+        const current = this.getRuntimeSettings();
+        const next = normalizeRuntimeSettings({
+            ...current,
+            ...settings,
+            updatedAt: new Date().toISOString(),
+            updatedBy
+        });
+        writeJson(RUNTIME_SETTINGS_FILE, next);
+        return next;
     },
 
     getPortfolio() {
@@ -134,7 +173,6 @@ const Storage = {
 
         writeJson(PORTFOLIO_FILE, portfolio);
         
-        // Hapus file posisi aktif setelah trade ditutup
         if (fs.existsSync(POSITION_FILE)) {
             fs.unlinkSync(POSITION_FILE);
         }
@@ -142,9 +180,6 @@ const Storage = {
         return portfolio;
     },
 
-    /**
-     * Menyimpan posisi aktif ke file untuk recovery jika bot restart
-     */
     saveActivePosition(position) {
         try {
             writeJson(POSITION_FILE, position);
@@ -154,10 +189,6 @@ const Storage = {
         }
     },
 
-    /**
-     * Memuat posisi aktif dari file saat bot restart
-     * @returns {Object|null} Posisi aktif atau null jika tidak ada
-     */
     loadActivePosition() {
         try {
             const position = readJson(POSITION_FILE, null);
