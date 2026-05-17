@@ -42,6 +42,49 @@ class EngineService {
         }
     }
 
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    getExecutionConfig() {
+        return {
+            simulateLatency: config.execution?.simulateLatency ?? true,
+            minLatencyMs: config.execution?.minLatencyMs ?? 1000,
+            maxLatencyMs: config.execution?.maxLatencyMs ?? 3000,
+            requoteAfterLatency: config.execution?.requoteAfterLatency ?? true,
+            rejectIfQuoteWorsensPct: config.execution?.rejectIfQuoteWorsensPct ?? 5
+        };
+    }
+
+    getRandomLatencyMs() {
+        const exec = this.getExecutionConfig();
+        const min = Math.max(0, Number(exec.minLatencyMs));
+        const max = Math.max(min, Number(exec.maxLatencyMs));
+        return Math.floor(min + Math.random() * (max - min + 1));
+    }
+
+    async simulateLatency(side, symbol) {
+        const exec = this.getExecutionConfig();
+        if (!exec.simulateLatency) {
+            return { simulated: false, latencyMs: 0 };
+        }
+
+        const latencyMs = this.getRandomLatencyMs();
+        console.log(chalk.gray(`[Latency ${side}] Simulasi delay eksekusi ${latencyMs}ms untuk ${symbol}...`));
+        await this.delay(latencyMs);
+        return { simulated: true, latencyMs };
+    }
+
+    getBuyQuoteWorseningPct(initialExecution, finalExecution) {
+        if (!initialExecution?.entryPriceUsd || !finalExecution?.entryPriceUsd) return 0;
+        return ((finalExecution.entryPriceUsd - initialExecution.entryPriceUsd) / initialExecution.entryPriceUsd) * 100;
+    }
+
+    getSellQuoteWorseningPct(initialExecution, finalExecution) {
+        if (!initialExecution?.exitSolAmount || !finalExecution?.exitSolAmount) return 0;
+        return ((initialExecution.exitSolAmount - finalExecution.exitSolAmount) / initialExecution.exitSolAmount) * 100;
+    }
+
     async getCurrentPrice(pairAddress, validateOnChain = false) {
         try {
             const resp = await axios.get(`${this.pairEndpoint}${pairAddress}`, { timeout: 3000 });
@@ -276,17 +319,37 @@ class EngineService {
         }
 
         const tokenDecimals = token.baseToken.decimals || token.info?.decimals || config.trading.defaultTokenDecimals || 6;
+        const execConfig = this.getExecutionConfig();
+        let initialBuyExecution;
         let buyExecution;
+        let latencyInfo = { simulated: false, latencyMs: 0 };
+        let quoteWorseningPct = 0;
 
         try {
-            console.log(chalk.cyan(`\n[Jupiter BUY] Mengambil quote entry untuk ${token.baseToken.symbol}...`));
-            buyExecution = await jupiter.getBuyExecution(token.baseToken.address, config.trading.positionSize, tokenDecimals);
+            console.log(chalk.cyan(`\n[Jupiter BUY] Mengambil quote awal untuk ${token.baseToken.symbol}...`));
+            initialBuyExecution = await jupiter.getBuyExecution(token.baseToken.address, config.trading.positionSize, tokenDecimals);
+
+            latencyInfo = await this.simulateLatency('BUY', token.baseToken.symbol);
+
+            if (execConfig.requoteAfterLatency) {
+                console.log(chalk.cyan(`[Jupiter BUY] Requote setelah latency untuk ${token.baseToken.symbol}...`));
+                buyExecution = await jupiter.getBuyExecution(token.baseToken.address, config.trading.positionSize, tokenDecimals);
+                quoteWorseningPct = this.getBuyQuoteWorseningPct(initialBuyExecution, buyExecution);
+
+                if (quoteWorseningPct > execConfig.rejectIfQuoteWorsensPct) {
+                    throw new Error(`Quote BUY memburuk ${quoteWorseningPct.toFixed(2)}% setelah latency, batas ${execConfig.rejectIfQuoteWorsensPct}%`);
+                }
+            } else {
+                buyExecution = initialBuyExecution;
+            }
         } catch (error) {
             console.log(chalk.red(`[Jupiter BUY] Entry ditolak: ${error.message}`));
             activityLogger.log('JUPITER_BUY_QUOTE_FAILED', {
                 symbol: token.baseToken.symbol,
                 address: token.baseToken.address,
-                error: error.message
+                error: error.message,
+                latencyInfo,
+                quoteWorseningPct
             });
             return;
         }
@@ -308,7 +371,10 @@ class EngineService {
         console.log(chalk.cyan(`\n[Volatility Analysis] Volatilitas: ${volatility.toFixed(4)}% | Price Range: ${priceRange.toFixed(2)}%`));
         console.log(chalk.green(`   Dynamic Trailing Stop: ${dynamicTrailingStopPercent}%`));
         console.log(chalk.green(`   Dynamic Take Profit: ${dynamicTargetProfitPercent}%`));
-        console.log(chalk.cyan(`[Jupiter BUY] Entry Price: $${price.toFixed(12)} | Price Impact: ${buyExecution.priceImpactPct}% | Est. Fee: ${buyExecution.estimatedFeeSol} SOL`));
+        console.log(chalk.cyan(`[Jupiter BUY] Entry Final: $${price.toFixed(12)} | Price Impact: ${buyExecution.priceImpactPct}% | Posisi: ${buyExecution.executedPositionSizeSol} SOL | Est. Fee: ${buyExecution.estimatedFeeSol} SOL`));
+        if (latencyInfo.simulated) {
+            console.log(chalk.gray(`[Latency BUY] Quote worsening setelah latency: ${quoteWorseningPct.toFixed(2)}%`));
+        }
 
         this.currentPosition = {
             symbol: token.baseToken.symbol,
@@ -318,14 +384,18 @@ class EngineService {
             entrySource: buyExecution.source,
             entryPrice: price,
             maxPrice: price,
-            positionSize: config.trading.positionSize,
+            positionSize: buyExecution.executedPositionSizeSol,
+            requestedPositionSize: config.trading.positionSize,
             tokenAmount: buyExecution.tokenAmount,
             tokenAmountRaw: buyExecution.tokenOutRaw,
-            entrySolValue: config.trading.positionSize,
+            entrySolValue: buyExecution.executedPositionSizeSol,
             entryUsdValue: buyExecution.solUsdValue,
             entryPriceImpactPct: buyExecution.priceImpactPct,
             entryEstimatedFeeSol: buyExecution.estimatedFeeSol,
             totalEstimatedFeesSol: buyExecution.estimatedFeeSol,
+            buyLatencyMs: latencyInfo.latencyMs,
+            buyQuoteWorseningPct: quoteWorseningPct,
+            buyQuoteAttempts: buyExecution.quoteAttempts,
             openedAt: new Date().toISOString(),
             dynamicTrailingStopPercent,
             dynamicTargetProfitPercent,
@@ -437,21 +507,41 @@ class EngineService {
 
         const cRisk = config.riskManagement;
         const tokenAddress = this.currentPosition.address;
+        const execConfig = this.getExecutionConfig();
+        let initialSellExecution;
         let sellExecution;
+        let latencyInfo = { simulated: false, latencyMs: 0 };
+        let quoteWorseningPct = 0;
 
         try {
-            console.log(chalk.cyan(`\n[Jupiter SELL] Mengambil quote exit untuk ${this.currentPosition.symbol}...`));
-            sellExecution = await jupiter.getSellExecution(
+            console.log(chalk.cyan(`\n[Jupiter SELL] Mengambil quote awal exit untuk ${this.currentPosition.symbol}...`));
+            initialSellExecution = await jupiter.getSellExecution(
                 this.currentPosition.address,
                 this.currentPosition.tokenAmountRaw,
                 this.currentPosition.tokenDecimals
             );
+
+            latencyInfo = await this.simulateLatency('SELL', this.currentPosition.symbol);
+
+            if (execConfig.requoteAfterLatency) {
+                console.log(chalk.cyan(`[Jupiter SELL] Requote setelah latency untuk ${this.currentPosition.symbol}...`));
+                sellExecution = await jupiter.getSellExecution(
+                    this.currentPosition.address,
+                    this.currentPosition.tokenAmountRaw,
+                    this.currentPosition.tokenDecimals
+                );
+                quoteWorseningPct = this.getSellQuoteWorseningPct(initialSellExecution, sellExecution);
+            } else {
+                sellExecution = initialSellExecution;
+            }
         } catch (error) {
             console.log(chalk.red(`[Jupiter SELL] Gagal mengambil quote exit: ${error.message}`));
             activityLogger.log('JUPITER_SELL_QUOTE_FAILED', {
                 symbol: this.currentPosition.symbol,
                 address: this.currentPosition.address,
-                error: error.message
+                error: error.message,
+                latencyInfo,
+                quoteWorseningPct
             });
             this.startMonitoring();
             this.isClosing = false;
@@ -479,6 +569,10 @@ class EngineService {
             exitPriceImpactPct: sellExecution.priceImpactPct,
             exitEstimatedFeeSol: sellExecution.estimatedFeeSol,
             totalEstimatedFeesSol,
+            sellLatencyMs: latencyInfo.latencyMs,
+            sellQuoteWorseningPct: quoteWorseningPct,
+            initialExitSolAmount: initialSellExecution?.exitSolAmount,
+            finalExitSolAmount: sellExecution.exitSolAmount,
             reason,
             closedAt: new Date().toISOString()
         };
@@ -520,9 +614,9 @@ class EngineService {
 
             storage.saveState(state);
 
-            console.log(chalk.green.bold(`\n[SELL] ${this.currentPosition.symbol} ditutup via Jupiter quote.`));
+            console.log(chalk.green.bold(`\n[SELL] ${this.currentPosition.symbol} ditutup via Jupiter quote final setelah latency.`));
             console.log(chalk.gray(`Gross PNL: ${grossPnl.toFixed(2)}% | Net PNL after fees: ${netPnl.toFixed(2)}%`));
-            console.log(chalk.gray(`Estimated Fees: ${totalEstimatedFeesSol} SOL`));
+            console.log(chalk.gray(`Estimated Fees: ${totalEstimatedFeesSol} SOL | Sell quote worsening: ${quoteWorseningPct.toFixed(2)}%`));
 
             await telegram.notifyTrade('SELL', tradeData);
             if (alertMsg !== '') await telegram.sendMessage(alertMsg);
