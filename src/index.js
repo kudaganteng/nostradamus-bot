@@ -1,49 +1,79 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
-const activityLogger = require('./utils/activityLogger'); // <--- Tambahkan import ini
+const telegram = require('./services/telegram');
+const applyJupiterFullPricePatch = require('./services/jupiterFullPricePatch');
+const applyRuntimeRiskPatch = require('./services/runtimeRiskPatch');
+const activityLogger = require('./utils/activityLogger');
+const storage = require('./utils/storage');
 const chalk = require('chalk');
 
-let isObserving = false; // Flag untuk memastikan bot tidak dobel observasi
+applyJupiterFullPricePatch(engine);
+applyRuntimeRiskPatch(engine);
+
+let isObserving = false;
+let scanCounter = 0;
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function coolDownToken(target, minutes, reason) {
+    const state = storage.getState();
+    state.tokenStats[target.baseToken.address] = state.tokenStats[target.baseToken.address] || { slCount: 0, cooldownUntil: 0, blacklisted: false };
+    state.tokenStats[target.baseToken.address].cooldownUntil = Date.now() + (minutes * 60 * 1000);
+    storage.saveState(state);
+    console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown ${minutes} menit: ${reason}`));
+}
 
 async function startScanLoop() {
-    // 1. Jangan scan jika sedang trading atau sedang dalam masa observasi 45 detik
-    if (engine.currentPosition || isObserving) {
-        setTimeout(startScanLoop, 5000);
-        return;
-    }
+    while (true) {
+        const sleepMs = engine.currentPosition || isObserving ? 5000 : 3000;
 
-    try {
-        const target = await scanner.findOpportunities();
+        if (!engine.currentPosition && !isObserving) {
+            try {
+                scanCounter++;
+                const dots = '.'.repeat(scanCounter % 4);
+                process.stdout.write(chalk.gray(`\r[Scanner] Memantau market Solana${dots.padEnd(3)} `));
 
-        if (target) {
-            console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
-            
-            // Mulai fase penahanan (Observasi PA)
-            isObserving = true;
-            const isConfirmed = await engine.observeAndConfirm(target);
-            isObserving = false;
+                const target = await scanner.findOpportunities();
 
-            if (isConfirmed) {
-                // Jika lolos tes 45 detik, baru eksekusi Buy
-                await engine.openPosition(target);
-            } else {
-                // Jika gagal (misal gagal breakout), berikan hukuman ringan agar tidak di-scan ulang dalam waktu dekat
-                console.log(chalk.gray(`[Info] Memasukkan ${target.baseToken.symbol} ke cooldown 3 menit karena gagal konfirmasi PA.`));
-                scanner.addToCooldown(target.baseToken.address, 3); // Pastikan scanner kamu punya fungsi addToCooldown (dalam menit)
+                if (target) {
+                    console.log(chalk.bgGreen.black.bold(`\n\n🎯 TARGET MATCH: ${target.baseToken.symbol} `));
+
+                    isObserving = true;
+                    const isConfirmed = await engine.observeAndConfirm(target);
+                    isObserving = false;
+
+                    if (isConfirmed) {
+                        const entryResult = await engine.openPosition(target);
+                        if (!entryResult?.ok && !engine.currentPosition) {
+                            const reason = entryResult?.reason || 'entry gagal tanpa alasan detail';
+                            console.log(chalk.yellow(`[ENTRY FAILED] ${target.baseToken.symbol}: ${reason}`));
+                            activityLogger.log('ENTRY_FAILED_AFTER_CONFIRMATION', {
+                                symbol: target.baseToken.symbol,
+                                address: target.baseToken.address,
+                                reason
+                            });
+                            coolDownToken(target, 5, `entry gagal: ${reason}`);
+                        }
+                    } else {
+                        coolDownToken(target, 3, 'gagal Breakout');
+                    }
+                }
+            } catch (error) {
+                console.error(chalk.red("\n[Loop Error]:"), error.message);
+                isObserving = false;
             }
-        } 
-    } catch (error) {
-        console.error(chalk.red("\n[Loop Error]:"), error.message);
-        isObserving = false;
-    } finally {
-        setTimeout(startScanLoop, 3000); // Looping utama
+        }
+
+        await delay(sleepMs);
     }
 }
 
 console.log(chalk.cyan.bold("====================================="));
-console.log(chalk.cyan.bold("  SOLANA SCALPER (SNIPER MODE v3)    "));
+console.log(chalk.cyan.bold("  SOLANA SCALPER (JUPITER MODE v5)   "));
 console.log(chalk.cyan.bold("====================================="));
 
+storage.init();
 activityLogger.init();
+telegram.startControls(engine);
 
 startScanLoop();
