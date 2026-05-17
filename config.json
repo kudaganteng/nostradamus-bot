@@ -2,7 +2,7 @@
   "trading": {
     "paperBalance": 1.0,
     "positionSize": 0.2,
-    "targetProfitPercent": 10,
+    "targetProfitPercent": 5,
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
