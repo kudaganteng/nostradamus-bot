@@ -5,7 +5,16 @@
   "jupiter": {
     "quoteEndpoint": "https://quote-api.jup.ag/v6/quote",
     "slippageBps": 500,
-    "maxPriceImpactPct": 10
+    "maxPriceImpactPct": 10,
+    "minPositionSizeSol": 0.03,
+    "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
+  },
+  "execution": {
+    "simulateLatency": true,
+    "minLatencyMs": 1000,
+    "maxLatencyMs": 3000,
+    "requoteAfterLatency": true,
+    "rejectIfQuoteWorsensPct": 5
   },
   "costs": {
     "estimatedSwapFeeSol": 0.000005,
