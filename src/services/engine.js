@@ -116,6 +116,20 @@ class EngineService {
         }
     }
 
+    async validateTokenOnChain(tokenAddress) {
+        try {
+            const tokenAccount = await this.connection.getAccountInfo(new PublicKey(tokenAddress));
+            if (!tokenAccount) {
+                activityLogger.log('RPC_WARNING', { message: 'Token account not found on-chain. Possible Rugpull.', tokenAddress });
+                return false;
+            }
+            return true;
+        } catch (error) {
+            activityLogger.log('RPC_WARNING', { message: 'Token validation failed', tokenAddress, error: error.message });
+            return false;
+        }
+    }
+
     async getIndicativePriceFromJupiterQuote() {
         if (!this.currentPosition?.tokenAmountRaw || !this.currentPosition?.tokenDecimals) {
             throw new Error('Data posisi tidak lengkap untuk refresh quote Jupiter.');
@@ -266,22 +280,28 @@ class EngineService {
 
     async observeAndConfirm(token) {
         activityLogger.log('OBSERVATION_START', { symbol: token.baseToken.symbol });
-        const obs = config.observation;
+        const obs = config.observation || {};
         console.log(chalk.cyan(`\n[Observer] 🕵️ Menunda Entry. Mengawasi ${token.baseToken.symbol} selama ${obs.durationSeconds} detik...`));
 
+        const isValidToken = await this.validateTokenOnChain(token.baseToken.address);
+        if (!isValidToken) {
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Token tidak valid on-chain.'));
+            return false;
+        }
+
         const prices = [];
-        const realTimeInterval = 1;
-        const iterations = Math.floor(obs.durationSeconds / realTimeInterval);
+        const realTimeInterval = Math.max(1, Number(obs.intervalSeconds || 1));
+        const iterations = Math.max(3, Math.floor((Number(obs.durationSeconds) || 10) / realTimeInterval));
 
         for (let i = 0; i < iterations; i++) {
-            const currentPrice = await this.getCurrentPrice(token.pairAddress, true);
+            const currentPrice = await this.getCurrentPrice(token.pairAddress, false);
             if (currentPrice) prices.push(currentPrice);
-            process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length}/${iterations} detik...\r`));
+            process.stdout.write(chalk.gray(`> Merekam aksi harga: ${prices.length}/${iterations} tick...\r`));
             await new Promise(resolve => setTimeout(resolve, realTimeInterval * 1000));
         }
 
         if (prices.length < 3) {
-            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari RPC.'));
+            console.log(chalk.yellow('\n[Observer] ❌ Ditolak: Data harga tidak cukup stabil dari DexScreener.'));
             return false;
         }
 
@@ -299,24 +319,34 @@ class EngineService {
 
         const startPrice = prices[0];
         const endPrice = prices[prices.length - 1];
+        const prevPrice = prices.length >= 2 ? prices[prices.length - 2] : startPrice;
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
 
         const trendPercent = ((endPrice - startPrice) / startPrice) * 100;
-        if (trendPercent < -3) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Trend negatif (${trendPercent.toFixed(2)}%).`));
+        const minTrendPercent = Number(obs.minTrendPercent ?? -3);
+        if (trendPercent < minTrendPercent) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Trend observasi lemah (${trendPercent.toFixed(2)}% < ${minTrendPercent}%).`));
+            return false;
+        }
+
+        if (obs.rejectIfLastTickNegative === true && endPrice < prevPrice) {
+            const lastTickPercent = ((endPrice - prevPrice) / prevPrice) * 100;
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Tick terakhir negatif (${lastTickPercent.toFixed(2)}%).`));
             return false;
         }
 
         const maxDropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
-        if (maxDropPercent > 25) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas terlalu tinggi (${maxDropPercent.toFixed(2)}%).`));
+        const maxDumpPercent = Number(obs.maxDumpPercent ?? 25);
+        if (maxDropPercent > maxDumpPercent) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Volatilitas/drop terlalu tinggi (${maxDropPercent.toFixed(2)}% > ${maxDumpPercent}%).`));
             return false;
         }
 
         const fromPeakPercent = ((maxPrice - endPrice) / maxPrice) * 100;
-        if (fromPeakPercent > 10) {
-            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Harga turun terlalu jauh dari puncak (${fromPeakPercent.toFixed(2)}%).`));
+        const maxFromPeakPercent = Number(obs.maxFromPeakPercent ?? 10);
+        if (fromPeakPercent > maxFromPeakPercent) {
+            console.log(chalk.yellow(`\n[Observer] ❌ Ditolak: Harga turun terlalu jauh dari puncak (${fromPeakPercent.toFixed(2)}% > ${maxFromPeakPercent}%).`));
             return false;
         }
 
@@ -330,10 +360,16 @@ class EngineService {
 
         token.volatility = volatility;
         token.priceRange = maxDropPercent;
+        token.observedStartPrice = startPrice;
+        token.observedEndPrice = endPrice;
+        token.observedMaxPrice = maxPrice;
+        token.observedMinPrice = minPrice;
+        token.observedTrendPercent = trendPercent;
+        token.observedFromPeakPercent = fromPeakPercent;
 
-        console.log(chalk.green.bold('\n[Observer] ✅ TERKONFIRMASI! Trend positif terdeteksi. Mengeksekusi BUY via Jupiter quote!'));
-        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Range: ${maxDropPercent.toFixed(2)}%`));
-        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per detik`));
+        console.log(chalk.green.bold('\n[Observer] ✅ TERKONFIRMASI! Momentum masih sehat. Mengeksekusi BUY via Jupiter quote!'));
+        console.log(chalk.gray(`   Start: $${startPrice.toFixed(6)} | End: $${endPrice.toFixed(6)} | Trend: ${trendPercent.toFixed(2)}% | Range: ${maxDropPercent.toFixed(2)}% | FromPeak: ${fromPeakPercent.toFixed(2)}%`));
+        console.log(chalk.gray(`   Volatility (StdDev): ${volatility.toFixed(4)}% per tick`));
         return true;
     }
 
@@ -397,6 +433,9 @@ class EngineService {
         console.log(chalk.green(`   Dynamic Trailing Stop: ${dynamicTrailingStopPercent}%`));
         console.log(chalk.green(`   Dynamic Take Profit: ${dynamicTargetProfitPercent}%`));
         console.log(chalk.cyan(`[Jupiter BUY] Entry Final: $${price.toFixed(12)} | Price Impact: ${buyExecution.priceImpactPct}% | Posisi: ${buyExecution.executedPositionSizeSol} SOL | Est. Fee: ${buyExecution.estimatedFeeSol} SOL`));
+        if (buyExecution.roundTrip) {
+            console.log(chalk.gray(`[RoundTrip] Loss: ${buyExecution.roundTrip.roundTripLossPct.toFixed(2)}% | Out: ${buyExecution.roundTrip.roundTripOutSol.toFixed(6)} SOL | SellImpact: ${buyExecution.roundTrip.sellImpactPct}%`));
+        }
         if (latencyInfo.simulated) {
             console.log(chalk.gray(`[Latency BUY] Quote worsening setelah latency: ${quoteWorseningPct.toFixed(2)}%`));
         }
@@ -418,6 +457,15 @@ class EngineService {
             entryPriceImpactPct: buyExecution.priceImpactPct,
             entryEstimatedFeeSol: buyExecution.estimatedFeeSol,
             totalEstimatedFeesSol: buyExecution.estimatedFeeSol,
+            entryRoundTripLossPct: buyExecution.roundTrip?.roundTripLossPct,
+            entryRoundTripOutSol: buyExecution.roundTrip?.roundTripOutSol,
+            entryRoundTripSellImpactPct: buyExecution.roundTrip?.sellImpactPct,
+            observedStartPrice: token.observedStartPrice,
+            observedEndPrice: token.observedEndPrice,
+            observedMaxPrice: token.observedMaxPrice,
+            observedMinPrice: token.observedMinPrice,
+            observedTrendPercent: token.observedTrendPercent,
+            observedFromPeakPercent: token.observedFromPeakPercent,
             buyLatencyMs: latencyInfo.latencyMs,
             buyQuoteWorseningPct: quoteWorseningPct,
             buyQuoteAttempts: buyExecution.quoteAttempts,
@@ -622,26 +670,24 @@ class EngineService {
 
                 if (netPnl <= cRisk.rugpullThresholdPercent) {
                     tState.blacklisted = true;
-                    alertMsg = `🚨 *RUGPULL DETECTED* (${netPnl.toFixed(2)}%). Koin di-blacklist permanen!`;
+                    alertMsg = `🚨 *RUGPULL DETECTED* (${netPnl.toFixed(2)}%). Token diblacklist permanen.`;
                 } else if (tState.slCount >= 2) {
-                    tState.cooldownUntil = Date.now() + cRisk.slCooldown2xMinutes * 60 * 1000;
-                    alertMsg = `⏸️ *Kena SL 2x*. Blacklist koin ini ${cRisk.slCooldown2xMinutes} menit.`;
+                    tState.cooldownUntil = Date.now() + (cRisk.slCooldown2xMinutes * 60 * 1000);
+                    alertMsg = `⏸️ *Kena SL 2x*. Cooldown token selama ${cRisk.slCooldown2xMinutes} menit.`;
                 } else {
-                    tState.cooldownUntil = Date.now() + cRisk.slCooldown1xMinutes * 60 * 1000;
-                    alertMsg = `⏳ *Kena SL 1x*. Koin di-cooldown ${cRisk.slCooldown1xMinutes} menit.`;
+                    tState.cooldownUntil = Date.now() + (cRisk.slCooldown1xMinutes * 60 * 1000);
+                    alertMsg = `⏳ *Kena SL 1x*. Token cooldown ${cRisk.slCooldown1xMinutes} menit.`;
                 }
             } else {
-                tState.cooldownUntil = Date.now() + 5 * 60 * 1000;
+                tState.cooldownUntil = Date.now() + (5 * 60 * 1000);
             }
 
+            state.tokenStats[tokenAddress] = tState;
             storage.saveState(state);
 
-            console.log(chalk.green.bold(`\n[SELL] ${this.currentPosition.symbol} ditutup via Jupiter quote final setelah latency.`));
-            console.log(chalk.gray(`Gross PNL: ${grossPnl.toFixed(2)}% | Net PNL after fees: ${netPnl.toFixed(2)}%`));
-            console.log(chalk.gray(`Estimated Fees: ${totalEstimatedFeesSol} SOL | Sell quote worsening: ${quoteWorseningPct.toFixed(2)}%`));
-
             await telegram.notifyTrade('SELL', tradeData);
-            if (alertMsg !== '') await telegram.sendMessage(alertMsg);
+            if (alertMsg) await telegram.sendMessage(alertMsg);
+
         } catch (error) {
             console.error('Gagal menutup posisi:', error.message);
         } finally {
