@@ -19,8 +19,8 @@
     "maxEntryPriceImpactPct": 3,
     "maxExitPriceImpactPct": 3,
     "enableRoundTripValidation": true,
-    "maxRoundTripLossPct": 5,
-    "minRoundTripOutSol": 0.18,
+    "maxRoundTripLossPct": 3,
+    "minRoundTripOutSol": 0.194,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
   },
@@ -29,7 +29,7 @@
     "minLatencyMs": 1000,
     "maxLatencyMs": 3000,
     "requoteAfterLatency": true,
-    "rejectIfQuoteWorsensPct": 5
+    "rejectIfQuoteWorsensPct": 2
   },
   "monitoring": {
     "quoteRefreshMs": 3000
@@ -57,6 +57,22 @@
       ]
     }
   },
+  "dailyRisk": {
+    "enabled": true,
+    "maxDailyLossSol": 0.1,
+    "maxDailyLossPercent": 10,
+    "pauseMinutesAfterDailyLoss": 1440
+  },
+  "exitRisk": {
+    "enabled": true,
+    "softExitImpactPct": 0.05,
+    "softConfirmTicks": 2,
+    "hardExitImpactPct": 0.1,
+    "blacklistLossPercent": -15,
+    "blacklistExitImpactPct": 0.1,
+    "cooldownAfterLossMinutes": 60,
+    "blacklistAfterLossCount": 2
+  },
   "observation": {
     "durationSeconds": 10,
     "intervalSeconds": 2,
@@ -79,8 +95,8 @@
     "fakeMomentumMinTransactions5m": 25
   },
   "riskManagement": {
-    "slCooldown1xMinutes": 15,
-    "slCooldown2xMinutes": 60,
+    "slCooldown1xMinutes": 60,
+    "slCooldown2xMinutes": 1440,
     "rugpullThresholdPercent": -40
   },
   "filters": {
