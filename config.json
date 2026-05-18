@@ -3,7 +3,7 @@
     "alchemyUrl": "https://solana-mainnet.g.alchemy.com/v2/O-YUgNdFZmxSp_sLS24b8"
   },
   "scanner": {
-    "includePromotionSources": false
+    "includePromotionSources": true
   },
   "jupiter": {
     "quoteEndpoint": "https://api.jup.ag/swap/v1/quote",
