@@ -5,7 +5,12 @@
   "jupiter": {
     "quoteEndpoint": "https://api.jup.ag/swap/v1/quote",
     "slippageBps": 500,
-    "maxPriceImpactPct": 10,
+    "maxPriceImpactPct": 5,
+    "maxEntryPriceImpactPct": 3,
+    "maxExitPriceImpactPct": 3,
+    "enableRoundTripValidation": true,
+    "maxRoundTripLossPct": 5,
+    "minRoundTripOutSol": 0.18,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
   },
@@ -17,7 +22,7 @@
     "rejectIfQuoteWorsensPct": 5
   },
   "monitoring": {
-    "quoteRefreshMs": 5000
+    "quoteRefreshMs": 1500
   },
   "costs": {
     "estimatedSwapFeeSol": 0.000005,
@@ -27,7 +32,7 @@
     "paperBalance": 1.0,
     "positionSize": 0.2,
     "targetProfitPercent": 10,
-    "stopLossPercent": 10,
+    "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
     "timeLimitMinutes": 10
@@ -35,7 +40,7 @@
   "observation": {
     "durationSeconds": 10,
     "intervalSeconds": 3,
-    "maxDumpPercent": 25
+    "maxDumpPercent": 22
   },
   "riskManagement": {
     "slCooldown1xMinutes": 15,
