@@ -2,6 +2,7 @@ const axios = require('axios');
 const chalk = require('chalk');
 const config = require('../../config.json');
 const activityLogger = require('../utils/activityLogger');
+const applyProfitLockPatch = require('./profitLockPatch');
 
 function n(value, fallback = 0) {
   const parsed = Number(value);
@@ -26,15 +27,7 @@ function getWashConfig() {
 }
 
 function readVolume5m(attributes) {
-  const candidates = [
-    attributes.volume_usd?.m5,
-    attributes.volume_usd?.h24?.m5,
-    attributes.volume?.m5,
-    attributes.volume_m5_usd,
-    attributes.volume_usd_m5,
-    attributes.volume_5m_usd,
-    attributes.volume_usd
-  ];
+  const candidates = [attributes.volume_usd?.m5, attributes.volume_usd?.h24?.m5, attributes.volume?.m5, attributes.volume_m5_usd, attributes.volume_usd_m5, attributes.volume_5m_usd, attributes.volume_usd];
   for (const value of candidates) {
     const parsed = n(value, NaN);
     if (Number.isFinite(parsed) && parsed > 0) return parsed;
@@ -51,14 +44,7 @@ function readTxns5m(attributes) {
 }
 
 function readUniqueBuyers(attributes) {
-  const candidates = [
-    attributes.unique_buyers_m5,
-    attributes.unique_buyers?.m5,
-    attributes.unique_traders_m5,
-    attributes.unique_traders?.m5,
-    attributes.unique_wallets_m5,
-    attributes.unique_wallets?.m5
-  ];
+  const candidates = [attributes.unique_buyers_m5, attributes.unique_buyers?.m5, attributes.unique_traders_m5, attributes.unique_traders?.m5, attributes.unique_wallets_m5, attributes.unique_wallets?.m5];
   for (const value of candidates) {
     const parsed = n(value, NaN);
     if (Number.isFinite(parsed) && parsed > 0) return { available: true, value: parsed };
@@ -67,12 +53,7 @@ function readUniqueBuyers(attributes) {
 }
 
 function readPriceChange5m(attributes, fallbackPair) {
-  const candidates = [
-    attributes.price_change_percentage?.m5,
-    attributes.price_change?.m5,
-    attributes.price_change_m5,
-    fallbackPair?.priceChange?.m5
-  ];
+  const candidates = [attributes.price_change_percentage?.m5, attributes.price_change?.m5, attributes.price_change_m5, fallbackPair?.priceChange?.m5];
   for (const value of candidates) {
     const parsed = n(value, NaN);
     if (Number.isFinite(parsed)) return parsed;
@@ -81,24 +62,22 @@ function readPriceChange5m(attributes, fallbackPair) {
 }
 
 function applyWashTradingPatch(engine) {
-  if (!engine || engine.__washTradingPatchApplied) return engine;
+  if (!engine) return engine;
+  applyProfitLockPatch(engine);
+  if (engine.__washTradingPatchApplied) return engine;
 
   engine.checkWashTrading = async function patchedCheckWashTrading(tokenAddress, pairAddress, pairSnapshot = null) {
     const w = getWashConfig();
     if (!w.enabled) return false;
 
     try {
-      console.log(chalk.cyan(`\n[Wash Trading Check] 🔍 Menganalisis aktivitas trading untuk ${tokenAddress}...`));
-
+      console.log(chalk.cyan(`\n[Wash Trading Check] Menganalisis aktivitas trading untuk ${tokenAddress}...`));
       const geckoUrl = `https://api.geckoterminal.com/api/v2/networks/solana/pools/${pairAddress}`;
-      const response = await axios.get(geckoUrl, {
-        headers: { Accept: 'application/json' },
-        timeout: 8000
-      });
+      const response = await axios.get(geckoUrl, { headers: { Accept: 'application/json' }, timeout: 8000 });
 
       if (!response.data || !response.data.data) {
         activityLogger.log('WASH_TRADING_UNKNOWN', { token: tokenAddress, reason: 'missing_gecko_data' });
-        console.log(chalk.yellow('[Wash Trading Check] ⚠️ Tidak ada data GeckoTerminal.'));
+        console.log(chalk.yellow('[Wash Trading Check] Data GeckoTerminal tidak ada.'));
         return w.failClosed;
       }
 
@@ -107,7 +86,6 @@ function applyWashTradingPatch(engine) {
       const volume5mUsd = readVolume5m(attributes);
       const uniqueBuyers = readUniqueBuyers(attributes);
       const priceChange5m = readPriceChange5m(attributes, pairSnapshot);
-
       const avgTxUsd = txns.total > 0 ? volume5mUsd / txns.total : 0;
       const txPerBuyer = uniqueBuyers.available && uniqueBuyers.value > 0 ? txns.total / uniqueBuyers.value : null;
       const uniqueBuyerRatio = uniqueBuyers.available && txns.total > 0 ? uniqueBuyers.value / txns.total : null;
@@ -118,49 +96,34 @@ function applyWashTradingPatch(engine) {
 
       if (w.requireUniqueBuyerData && !uniqueBuyers.available) {
         activityLogger.log('WASH_TRADING_UNKNOWN', { token: tokenAddress, reason: 'missing_unique_buyer_data', txns, volume5mUsd });
-        console.log(chalk.yellow('[Wash Trading Check] ⚠️ Unique buyer data tidak tersedia.'));
         return w.failClosed;
       }
 
       if (avgTxUsd > 0 && avgTxUsd < w.minAverageTransactionUsd && txns.total >= w.minTransactionsForLowAverageCheck) {
         activityLogger.log('WASH_TRADING_DETECTED', { token: tokenAddress, reason: 'low_average_tx_usd', avgTxUsd, txns, volume5mUsd });
-        console.log(chalk.red.bold(`   ⚠️ WASH TRADING: Avg transaksi terlalu kecil ($${avgTxUsd.toFixed(2)}).`));
         return true;
       }
 
       if (uniqueBuyers.available && txPerBuyer !== null && txPerBuyer > w.maxTransactionsPerBuyer && txns.total >= w.minTransactionsForBotCheck) {
         activityLogger.log('WASH_TRADING_DETECTED', { token: tokenAddress, reason: 'high_transactions_per_buyer', txPerBuyer, uniqueBuyers: uniqueBuyers.value, txns });
-        console.log(chalk.red.bold(`   ⚠️ WASH TRADING: Transaksi per buyer terlalu tinggi (${txPerBuyer.toFixed(1)}).`));
         return true;
       }
 
       if (uniqueBuyers.available && uniqueBuyerRatio !== null && uniqueBuyerRatio < w.minUniqueBuyerRatio && txns.total >= w.minTransactionsForBotCheck) {
         activityLogger.log('WASH_TRADING_DETECTED', { token: tokenAddress, reason: 'low_unique_buyer_ratio', uniqueBuyerRatio, uniqueBuyers: uniqueBuyers.value, txns });
-        console.log(chalk.red.bold(`   ⚠️ WASH TRADING: Unique buyer ratio rendah (${uniqueBuyerRatio.toFixed(3)}).`));
         return true;
       }
 
       if (volume5mUsd >= w.fakeMomentumMinVolume5mUsd && txns.total >= w.fakeMomentumMinTransactions5m && priceChange5m <= w.fakeMomentumMaxPriceChange5m) {
         activityLogger.log('WASH_TRADING_DETECTED', { token: tokenAddress, reason: 'fake_momentum_volume_without_price', volume5mUsd, txns, priceChange5m });
-        console.log(chalk.red.bold(`   ⚠️ WASH TRADING: Volume/tx besar tapi harga tidak ikut bergerak (${priceChange5m.toFixed(2)}%).`));
         return true;
       }
 
-      activityLogger.log('WASH_TRADING_CLEAN', {
-        token: tokenAddress,
-        txns,
-        volume5mUsd,
-        avgTxUsd,
-        uniqueBuyers: uniqueBuyers.available ? uniqueBuyers.value : null,
-        uniqueBuyerRatio,
-        txPerBuyer,
-        priceChange5m
-      });
-      console.log(chalk.green('   ✅ Aktivitas trading lolos wash-trading guard.'));
+      activityLogger.log('WASH_TRADING_CLEAN', { token: tokenAddress, txns, volume5mUsd, avgTxUsd, uniqueBuyers: uniqueBuyers.available ? uniqueBuyers.value : null, uniqueBuyerRatio, txPerBuyer, priceChange5m });
       return false;
     } catch (error) {
       activityLogger.log('WASH_TRADING_CHECK_ERROR', { token: tokenAddress, error: error.message, failClosed: w.failClosed });
-      console.log(chalk.yellow(`[Wash Trading Check] ⚠️ Error: ${error.message}`));
+      console.log(chalk.yellow(`[Wash Trading Check] Error: ${error.message}`));
       return w.failClosed;
     }
   };
