@@ -49,7 +49,7 @@
     "rejectIfLastTickNegative": true
   },
   "washTrading": {
-    "enabled": true,
+    "enabled": false,
     "failClosed": false,
     "requireUniqueBuyerData": false,
     "maxTransactionsPerBuyer": 20,
