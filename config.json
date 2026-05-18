@@ -48,6 +48,19 @@
     "maxFromPeakPercent": 6,
     "rejectIfLastTickNegative": true
   },
+  "washTrading": {
+    "enabled": true,
+    "failClosed": false,
+    "requireUniqueBuyerData": false,
+    "maxTransactionsPerBuyer": 20,
+    "minUniqueBuyerRatio": 0.12,
+    "minAverageTransactionUsd": 2,
+    "minTransactionsForLowAverageCheck": 8,
+    "minTransactionsForBotCheck": 12,
+    "fakeMomentumMinVolume5mUsd": 1000,
+    "fakeMomentumMaxPriceChange5m": 1,
+    "fakeMomentumMinTransactions5m": 25
+  },
   "riskManagement": {
     "slCooldown1xMinutes": 15,
     "slCooldown2xMinutes": 60,
