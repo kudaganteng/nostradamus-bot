@@ -42,11 +42,11 @@
   },
   "observation": {
     "durationSeconds": 10,
-    "intervalSeconds": 3,
+    "intervalSeconds": 2,
     "maxDumpPercent": 22,
-    "minTrendPercent": 0.5,
-    "maxFromPeakPercent": 6,
-    "rejectIfLastTickNegative": true
+    "minTrendPercent": -1,
+    "maxFromPeakPercent": 8,
+    "rejectIfLastTickNegative": false
   },
   "washTrading": {
     "enabled": false,
