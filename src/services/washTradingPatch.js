@@ -3,6 +3,7 @@ const chalk = require('chalk');
 const config = require('../../config.json');
 const activityLogger = require('../utils/activityLogger');
 const applyProfitLockPatch = require('./profitLockPatch');
+const applyRiskGuardPatch = require('./riskGuardPatch');
 
 function n(value, fallback = 0) {
   const parsed = Number(value);
@@ -64,6 +65,7 @@ function readPriceChange5m(attributes, fallbackPair) {
 function applyWashTradingPatch(engine) {
   if (!engine) return engine;
   applyProfitLockPatch(engine);
+  applyRiskGuardPatch(engine);
   if (engine.__washTradingPatchApplied) return engine;
 
   engine.checkWashTrading = async function patchedCheckWashTrading(tokenAddress, pairAddress, pairSnapshot = null) {
