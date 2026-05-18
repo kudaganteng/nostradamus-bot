@@ -45,7 +45,17 @@
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
-    "timeLimitMinutes": 10
+    "timeLimitMinutes": 10,
+    "profitLock": {
+      "enabled": true,
+      "confirmTicks": 2,
+      "tiers": [
+        { "maxPnl": 5, "lockPnl": 1.5 },
+        { "maxPnl": 8, "lockPnl": 3 },
+        { "maxPnl": 12, "lockPnl": 5 },
+        { "maxPnl": 18, "lockPnl": 8 }
+      ]
+    }
   },
   "observation": {
     "durationSeconds": 10,
