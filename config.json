@@ -3,7 +3,14 @@
     "alchemyUrl": "https://solana-mainnet.g.alchemy.com/v2/O-YUgNdFZmxSp_sLS24b8"
   },
   "scanner": {
-    "includePromotionSources": true
+    "includePromotionSources": true,
+    "selectionMode": "top_random",
+    "topCandidateCount": 5,
+    "minCandidateScore": 0,
+    "promotionPenalty": 2,
+    "repeatFailurePenalty": 2,
+    "recentCooldownPenalty": 1,
+    "logTopCandidates": 5
   },
   "jupiter": {
     "quoteEndpoint": "https://api.jup.ag/swap/v1/quote",
