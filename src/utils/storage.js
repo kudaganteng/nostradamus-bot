@@ -22,6 +22,15 @@ function writeJson(filePath, data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+function defaultState() {
+    return {
+        tokenStats: {},
+        globalPauseUntil: 0,
+        dailyRiskTriggeredAt: null,
+        dailyRiskReason: null
+    };
+}
+
 const Storage = {
     init() {
         try {
@@ -40,9 +49,7 @@ const Storage = {
             }
 
             if (!fs.existsSync(STATE_FILE)) {
-                writeJson(STATE_FILE, {
-                    tokenStats: {}
-                });
+                writeJson(STATE_FILE, defaultState());
             }
         } catch (err) {
             console.error(chalk.red('Gagal inisialisasi storage:'), err.message);
@@ -50,18 +57,21 @@ const Storage = {
     },
 
     getState() {
-        const state = readJson(STATE_FILE, {
-            tokenStats: {}
-        });
-
+        const state = readJson(STATE_FILE, defaultState()) || defaultState();
         return {
-            tokenStats: state.tokenStats || {}
+            ...defaultState(),
+            ...state,
+            tokenStats: state.tokenStats || {},
+            globalPauseUntil: Number(state.globalPauseUntil || 0)
         };
     },
 
     saveState(state) {
         writeJson(STATE_FILE, {
-            tokenStats: state.tokenStats || {}
+            ...defaultState(),
+            ...state,
+            tokenStats: state.tokenStats || {},
+            globalPauseUntil: Number(state.globalPauseUntil || 0)
         });
     },
 
