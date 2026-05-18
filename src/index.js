@@ -1,9 +1,12 @@
 const scanner = require('./services/scanner');
 const engine = require('./services/engine');
 const telegram = require('./services/telegram');
+const applyWashTradingPatch = require('./services/washTradingPatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
+
+applyWashTradingPatch(engine);
 
 let isObserving = false;
 let scanCounter = 0;
