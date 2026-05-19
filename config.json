@@ -74,9 +74,9 @@
   "observation": {
     "durationSeconds": 10,
     "intervalSeconds": 2,
-    "maxDumpPercent": 22,
-    "minTrendPercent": 0,
-    "maxFromPeakPercent": 4,
+    "maxDumpPercent": 25,
+    "minTrendPercent": -1,
+    "maxFromPeakPercent": 8,
     "rejectIfLastTickNegative": true
   },
   "washTrading": {
@@ -98,22 +98,22 @@
     "rugpullThresholdPercent": -40
   },
   "filters": {
-    "minLiquidity": 2000,
+    "minLiquidity": 1500,
     "maxLiquidity": 500000,
     "minAgeMinutes": 2,
     "maxAgeMinutes": 360,
-    "minVolume5m": 300,
-    "volumeAccelRatio": 1.1,
-    "buyerAccelRatio": 1.1,
-    "minBuySellRatio": 1.25,
-    "maxSellPressureRatio": 0.44,
-    "minNetBuys5m": 4,
-    "minBuys5m": 12,
-    "minPriceChange1m": 0.5,
-    "minPriceChange5m": 0,
+    "minVolume5m": 200,
+    "volumeAccelRatio": 0.8,
+    "buyerAccelRatio": 0.8,
+    "minBuySellRatio": 1.1,
+    "maxSellPressureRatio": 0.5,
+    "minNetBuys5m": 2,
+    "minBuys5m": 6,
+    "minPriceChange1m": -0.3,
+    "minPriceChange5m": -1,
     "maxPriceChange5m": 100,
     "maxPriceChange1m": 30,
     "rejectPullbackAfterPump": true,
-    "pullbackPump5mThreshold": 10
+    "pullbackPump5mThreshold": 15
   }
 }
