@@ -249,8 +249,11 @@ class JupiterService {
         const sellQuote = await this.getQuote(tokenMint, SOL_MINT, tokenAmountRaw, { maxPriceImpactPct: execConfig.maxExitPriceImpactPct });
         const tokenAmount = fromRawAmount(tokenAmountRaw, tokenDecimals);
         const exitSolAmount = fromRawAmount(sellQuote.outAmount, SOL_DECIMALS);
+        const solUsdQuote = await this.getQuote(SOL_MINT, USDC_MINT, sellQuote.outAmount, { maxPriceImpactPct: 100 });
+        const exitUsdValue = fromRawAmount(solUsdQuote.outAmount, USDC_DECIMALS);
+        const exitPriceUsd = tokenAmount > 0 ? exitUsdValue / tokenAmount : 0;
         const estimatedFeeSol = this.estimateSwapCostSol();
-        if (!exitSolAmount) throw new Error('Gagal menghitung SOL exit dari quote Jupiter.');
+        if (!exitSolAmount || !exitPriceUsd) throw new Error('Gagal menghitung SOL/USD exit dari quote Jupiter.');
 
         return {
             source: 'jupiter_quote_sol_only',
@@ -260,11 +263,12 @@ class JupiterService {
             solOutRaw: sellQuote.outAmount,
             tokenAmount,
             exitSolAmount,
-            exitUsdValue: 0,
-            exitPriceUsd: 0,
+            exitUsdValue,
+            exitPriceUsd,
             priceImpactPct: Number(sellQuote.priceImpactPct || 0),
             estimatedFeeSol,
-            quote: sellQuote
+            quote: sellQuote,
+            solUsdQuote
         };
     }
 
