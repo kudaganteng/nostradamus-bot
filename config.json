@@ -29,7 +29,7 @@
     "rejectIfQuoteWorsensPct": 2
   },
   "monitoring": {
-    "quoteRefreshMs": 7000
+    "quoteRefreshMs": 5000
   },
   "costs": {
     "estimatedSwapFeeSol": 0.000005,
