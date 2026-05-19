@@ -2,6 +2,7 @@ const axios = require('axios');
 const chalk = require('chalk');
 const config = require('../../config.json');
 const activityLogger = require('../utils/activityLogger');
+const applySolPnlPatch = require('./solPnlPatch');
 const applyProfitLockPatch = require('./profitLockPatch');
 const applyRiskGuardPatch = require('./riskGuardPatch');
 
@@ -64,6 +65,7 @@ function readPriceChange5m(attributes, fallbackPair) {
 
 function applyWashTradingPatch(engine) {
   if (!engine) return engine;
+  applySolPnlPatch(engine);
   applyProfitLockPatch(engine);
   applyRiskGuardPatch(engine);
   if (engine.__washTradingPatchApplied) return engine;
