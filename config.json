@@ -100,8 +100,8 @@
   "filters": {
     "minLiquidity": 1500,
     "maxLiquidity": 500000,
-    "minAgeMinutes": 2,
-    "maxAgeMinutes": 360,
+    "minAgeMinutes": 30,
+    "maxAgeMinutes": 1440,
     "minVolume5m": 200,
     "volumeAccelRatio": 0.8,
     "buyerAccelRatio": 0.8,
