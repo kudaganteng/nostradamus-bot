@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const config = require('../../config.json');
 const activityLogger = require('../utils/activityLogger');
 
 function n(value, fallback = 0) {
@@ -33,6 +34,61 @@ function syntheticPriceFromPnl(position, pnlPercent) {
   return entryPrice > 0 ? entryPrice * (1 + pnlPercent / 100) : 0;
 }
 
+function getExitKind(reason = '') {
+  const text = String(reason);
+  if (text.includes('Moon Target')) return 'take_profit';
+  if (text.includes('Stop Loss')) return 'stop_loss';
+  if (text.includes('Profit Lock')) return 'profit_lock';
+  if (text.includes('Trailing Stop')) return 'trailing_stop';
+  if (text.includes('Exit Impact') || text.includes('RUGPULL') || text.includes('Hard Guard')) return 'emergency';
+  if (text.includes('Time Limit')) return 'time_limit';
+  return 'other';
+}
+
+function getExitThreshold(position, kind) {
+  const trading = config.trading || {};
+  if (kind === 'take_profit') return n(position.dynamicTargetProfitPercent, n(trading.targetProfitPercent, 7));
+  if (kind === 'stop_loss') return -Math.abs(n(position.telegramStopLossPercent, n(trading.stopLossPercent, 7)));
+  if (kind === 'profit_lock') return n(position.activeProfitLockTier?.lockPnl, 0);
+  if (kind === 'trailing_stop') return 0;
+  return null;
+}
+
+function shouldCancelExit({ kind, triggerPnl, confirmPnl, threshold }) {
+  if (kind === 'emergency' || kind === 'time_limit') return { cancel: false, reason: 'non_revalidated_exit' };
+
+  if (kind === 'take_profit') {
+    if (confirmPnl < threshold) {
+      return { cancel: true, reason: `TP tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% < target ${threshold}%` };
+    }
+  }
+
+  if (kind === 'stop_loss') {
+    if (confirmPnl > threshold) {
+      return { cancel: true, reason: `SL tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% > SL ${threshold}%` };
+    }
+  }
+
+  if (kind === 'profit_lock') {
+    if (confirmPnl < 0 || (threshold > 0 && confirmPnl > threshold)) {
+      return { cancel: true, reason: `Profit lock tidak valid lagi: confirm ${confirmPnl.toFixed(2)}%, lock ${threshold}%` };
+    }
+  }
+
+  if (kind === 'trailing_stop') {
+    if (confirmPnl < 0) {
+      return { cancel: true, reason: `Trailing profit berubah negatif: confirm ${confirmPnl.toFixed(2)}%` };
+    }
+  }
+
+  const maxAllowedTriggerDriftPct = n(config.exitRisk?.maxExitTriggerDriftPct, 4);
+  if ((kind === 'take_profit' || kind === 'profit_lock' || kind === 'trailing_stop') && triggerPnl - confirmPnl > maxAllowedTriggerDriftPct) {
+    return { cancel: true, reason: `Quote drift terlalu besar: trigger ${triggerPnl.toFixed(2)}% -> confirm ${confirmPnl.toFixed(2)}%` };
+  }
+
+  return { cancel: false, reason: 'confirmed' };
+}
+
 function patchLastTradeReasonIfNeeded() {
   const tradesFile = path.join(process.cwd(), 'paperTrades.json');
   if (!fs.existsSync(tradesFile)) return;
@@ -47,9 +103,12 @@ function patchLastTradeReasonIfNeeded() {
     const reason = String(last.reason || '');
     const finalPnl = n(last.pnl, 0);
     const indicativePnl = n(last.indicativePnl, 0);
-    const looksLikeProfitExit = reason.includes('Moon Target') || reason.includes('Profit Lock') || reason.includes('Trailing Stop');
+    const kind = getExitKind(reason);
+    const target = n(last.dynamicTargetProfitPercent, n(config.trading?.targetProfitPercent, 7));
+    const looksLikeProfitExit = kind === 'take_profit' || kind === 'profit_lock' || kind === 'trailing_stop';
+    const degradedProfitExit = looksLikeProfitExit && (finalPnl < 0 || (kind === 'take_profit' && finalPnl < target));
 
-    if (looksLikeProfitExit && finalPnl < 0) {
+    if (degradedProfitExit) {
       last.originalReason = last.reason;
       last.reason = `⚠️ SELL_REQUOTE_DEGRADED: indikasi ${indicativePnl.toFixed(2)}%, final ${finalPnl.toFixed(2)}%`;
       last.executionMismatch = true;
@@ -104,6 +163,14 @@ function applySolPnlPatch(engine) {
         this.currentPosition.lastIndicativeGrossPnlPercent = grossPnl;
         this.currentPosition.lastIndicativeExitFeeSol = solPnl.exitFeeSol;
         this.currentPosition.lastIndicativePriceUsd = quoteSnapshot.price;
+        this.currentPosition.lastExitTriggerQuote = {
+          at: new Date().toISOString(),
+          exitSolAmount: solPnl.exitSol,
+          netPnlPercent: pnl,
+          grossPnlPercent: grossPnl,
+          priceUsd: quoteSnapshot.price,
+          priceImpactPct: quoteSnapshot.priceImpactPct
+        };
 
         if (!Number.isFinite(this.currentPosition.maxSolPnlPercent) || pnl > this.currentPosition.maxSolPnlPercent) {
           this.currentPosition.maxSolPnlPercent = pnl;
@@ -122,6 +189,58 @@ function applySolPnlPatch(engine) {
   };
 
   engine.closePosition = async function patchedClosePosition(indicativePrice, indicativePnl, reason) {
+    if (!this.currentPosition) return;
+
+    const kind = getExitKind(reason);
+    const triggerPnl = n(indicativePnl, n(this.currentPosition.lastIndicativeNetPnlPercent, 0));
+    const triggerExitSol = n(this.currentPosition.lastIndicativeExitSolAmount, 0);
+    const threshold = getExitThreshold(this.currentPosition, kind);
+
+    if (kind !== 'emergency' && kind !== 'time_limit') {
+      try {
+        const confirmSnapshot = await this.getIndicativePriceFromJupiterQuote();
+        const confirmSolPnl = getNetSolPnl(this.currentPosition, confirmSnapshot);
+        const confirmPnl = confirmSolPnl.netPnlPercent;
+        const confirmPrice = syntheticPriceFromPnl(this.currentPosition, confirmPnl);
+        const quoteDriftPct = triggerExitSol > 0 ? ((triggerExitSol - confirmSolPnl.exitSol) / triggerExitSol) * 100 : 0;
+        const decision = shouldCancelExit({ kind, triggerPnl, confirmPnl, threshold });
+
+        this.currentPosition.exitRevalidation = {
+          kind,
+          reason,
+          triggerPnl,
+          confirmPnl,
+          triggerExitSol,
+          confirmExitSol: confirmSolPnl.exitSol,
+          quoteDriftPct,
+          threshold,
+          decision: decision.reason,
+          at: new Date().toISOString()
+        };
+
+        if (decision.cancel) {
+          activityLogger.log('EXIT_REVALIDATION_CANCELLED', this.currentPosition.exitRevalidation);
+          console.log(chalk.yellow(`\n[Exit Revalidate] Batal close ${this.currentPosition.symbol}: ${decision.reason}`));
+          this.isClosing = false;
+          if (!this.checkInterval) this.startMonitoring();
+          return;
+        }
+
+        activityLogger.log('EXIT_REVALIDATION_CONFIRMED', this.currentPosition.exitRevalidation);
+        return originalClosePosition(confirmPrice, confirmPnl, reason);
+      } catch (error) {
+        activityLogger.log('EXIT_REVALIDATION_ERROR', {
+          symbol: this.currentPosition.symbol,
+          reason,
+          error: error.message
+        });
+        console.log(chalk.yellow(`\n[Exit Revalidate] Gagal revalidasi quote: ${error.message}. Close dibatalkan untuk menghindari false exit.`));
+        this.isClosing = false;
+        if (!this.checkInterval) this.startMonitoring();
+        return;
+      }
+    }
+
     await originalClosePosition(indicativePrice, indicativePnl, reason);
     patchLastTradeReasonIfNeeded();
   };
