@@ -62,11 +62,11 @@
   },
   "exitRisk": {
     "enabled": true,
-    "softExitImpactPct": 0.05,
+    "softExitImpactPct": 1,
     "softConfirmTicks": 2,
-    "hardExitImpactPct": 0.1,
+    "hardExitImpactPct": 3,
     "blacklistLossPercent": -15,
-    "blacklistExitImpactPct": 0.1,
+    "blacklistExitImpactPct": 5,
     "cooldownAfterLossMinutes": 60,
     "blacklistAfterLossCount": 2,
     "maxExitTriggerDriftPct": 4
