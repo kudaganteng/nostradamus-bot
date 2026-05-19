@@ -16,8 +16,8 @@
     "quoteRetryDelayMs": 1200,
     "sellSolOnly": true,
     "enableRoundTripValidation": true,
-    "maxRoundTripLossPct": 3,
-    "minRoundTripOutSol": 0.194,
+    "maxRoundTripLossPct": 4,
+    "minRoundTripOutSol": 0,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
   },
