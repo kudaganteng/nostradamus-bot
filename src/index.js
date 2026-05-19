@@ -2,11 +2,13 @@ const scanner = require('./services/scanner');
 const engine = require('./services/engine');
 const telegram = require('./services/telegram');
 const applyWashTradingPatch = require('./services/washTradingPatch');
+const applyRuntimeRiskPatch = require('./services/runtimeRiskPatch');
 const activityLogger = require('./utils/activityLogger');
 const storage = require('./utils/storage');
 const chalk = require('chalk');
 
 applyWashTradingPatch(engine);
+applyRuntimeRiskPatch(engine);
 
 let isObserving = false;
 let scanCounter = 0;
