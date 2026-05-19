@@ -34,7 +34,9 @@ class ScannerService {
             promotionPenalty: safeNumber(s.promotionPenalty, 2),
             repeatFailurePenalty: safeNumber(s.repeatFailurePenalty, 2),
             recentCooldownPenalty: safeNumber(s.recentCooldownPenalty, 1),
-            logTopCandidates: Math.max(0, safeNumber(s.logTopCandidates, 5))
+            logTopCandidates: Math.max(0, safeNumber(s.logTopCandidates, 5)),
+            detailConcurrency: Math.max(1, safeNumber(s.detailConcurrency, 6)),
+            maxPairsPerToken: Math.max(1, safeNumber(s.maxPairsPerToken, 3))
         };
     }
 
@@ -64,39 +66,12 @@ class ScannerService {
                 return null;
             }
 
-            process.stdout.write(chalk.gray(`\r[Scanner] Mengevaluasi ${uniqueAddresses.size} koin...         `));
-            const candidates = [];
-
-            for (const address of uniqueAddresses) {
-                const tState = state.tokenStats[address];
-                if (tState) {
-                    if (tState.blacklisted) continue;
-                    if (tState.cooldownUntil > Date.now()) continue;
-                }
-
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    const pairRes = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${address}`, { timeout: 3000 });
-                    const pairs = pairRes.data.pairs;
-                    if (!pairs || !Array.isArray(pairs) || pairs.length === 0) continue;
-
-                    const solanaPair = this.pickBestSolanaPair(pairs);
-                    if (!solanaPair) continue;
-
-                    const candidate = this.evaluateCandidate(solanaPair, state);
-                    if (candidate.match) {
-                        candidates.push(candidate);
-                    }
-                } catch (innerError) {
-                    if (innerError.response && innerError.response.status === 429) {
-                        console.log(chalk.red('\n[!] Rate Limit terdeteksi, istirahat 5 detik...'));
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                    }
-                    continue;
-                }
+            const candidates = await this.collectCandidates(Array.from(uniqueAddresses), state);
+            if (candidates.length === 0) {
+                process.stdout.write(chalk.gray(`\r[Scanner] Tidak ada kandidat lolos dari ${uniqueAddresses.size} address.         `));
+                return null;
             }
 
-            if (candidates.length === 0) return null;
             const selected = this.selectCandidate(candidates);
             activityLogger.log('SCANNER_MATCH', {
                 symbol: selected.pair.baseToken.symbol,
@@ -113,6 +88,59 @@ class ScannerService {
         } catch (error) {
             console.error(chalk.red('Scanner API Error:'), error.message);
             return null;
+        }
+    }
+
+    async collectCandidates(addresses, state) {
+        const scannerConfig = this.getScannerConfig();
+        const candidates = [];
+        let checkedAddresses = 0;
+        let fetchedPairs = 0;
+        let skippedState = 0;
+
+        for (let i = 0; i < addresses.length; i += scannerConfig.detailConcurrency) {
+            const batch = addresses.slice(i, i + scannerConfig.detailConcurrency);
+            const results = await Promise.all(batch.map(address => this.fetchTokenPairs(address, state)));
+
+            for (const result of results) {
+                checkedAddresses += 1;
+                if (result.skippedByState) {
+                    skippedState += 1;
+                    continue;
+                }
+                if (!result.pairs || result.pairs.length === 0) continue;
+
+                const solanaPairs = this.getCandidateSolanaPairs(result.pairs, scannerConfig.maxPairsPerToken);
+                fetchedPairs += solanaPairs.length;
+
+                for (const pair of solanaPairs) {
+                    const candidate = this.evaluateCandidate(pair, state);
+                    if (candidate.match) candidates.push(candidate);
+                }
+            }
+
+            process.stdout.write(chalk.gray(`\r[Scanner] Address ${Math.min(i + batch.length, addresses.length)}/${addresses.length} | Pairs ${fetchedPairs} | Kandidat ${candidates.length} | StateSkip ${skippedState}      `));
+        }
+
+        console.log(chalk.gray(`\n[Scanner Stats] Address: ${checkedAddresses}, skippedState: ${skippedState}, solanaPairs: ${fetchedPairs}, kandidatLolos: ${candidates.length}`));
+        return candidates;
+    }
+
+    async fetchTokenPairs(address, state) {
+        const tState = state.tokenStats?.[address];
+        if (tState) {
+            if (tState.blacklisted) return { address, skippedByState: true, reason: 'blacklisted' };
+            if (tState.cooldownUntil > Date.now()) return { address, skippedByState: true, reason: 'cooldown' };
+        }
+
+        try {
+            const pairRes = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${address}`, { timeout: 3000 });
+            return { address, pairs: Array.isArray(pairRes.data?.pairs) ? pairRes.data.pairs : [] };
+        } catch (error) {
+            if (error.response && error.response.status === 429) {
+                activityLogger.log('SCANNER_RATE_LIMIT', { address, message: 'DexScreener token detail 429' });
+            }
+            return { address, pairs: [], error: error.message };
         }
     }
 
@@ -140,10 +168,20 @@ class ScannerService {
         return addresses;
     }
 
+    getCandidateSolanaPairs(pairs, maxPairsPerToken = 3) {
+        return pairs
+            .filter(p => p.chainId === 'solana')
+            .sort((a, b) => {
+                const liqDiff = safeNumber(b.liquidity?.usd, 0) - safeNumber(a.liquidity?.usd, 0);
+                if (liqDiff !== 0) return liqDiff;
+                return safeNumber(b.volume?.m5, 0) - safeNumber(a.volume?.m5, 0);
+            })
+            .slice(0, maxPairsPerToken);
+    }
+
     pickBestSolanaPair(pairs) {
-        const solanaPairs = pairs.filter(p => p.chainId === 'solana');
-        if (solanaPairs.length === 0) return null;
-        return solanaPairs.sort((a, b) => safeNumber(b.liquidity?.usd, 0) - safeNumber(a.liquidity?.usd, 0))[0];
+        const solanaPairs = this.getCandidateSolanaPairs(pairs, 1);
+        return solanaPairs[0] || null;
     }
 
     evaluateCandidate(pair, state) {
@@ -247,7 +285,7 @@ class ScannerService {
         result.match = score >= scannerConfig.minCandidateScore;
         result.score = score;
         result.reasons = reasons;
-        result.metrics = { pairAgeMinutes, liq, vol5m, buys5m, sells5m, bsRatio, sellPressureRatio, netBuys5m, volAccel, buyerAccel, change1m, change5m, sources };
+        result.metrics = { pairAgeMinutes, liq, vol5m, buys5m, sells5m, bsRatio, sellPressureRatio, netBuys5m, volAccel, buyerAccel, change1m, change5m, sources, pairAddress: pair.pairAddress };
         return result;
     }
 
@@ -260,7 +298,7 @@ class ScannerService {
         if (logCount > 0) {
             console.log(chalk.cyan(`\n[Scanner] Top ${logCount}/${sorted.length} kandidat:`));
             sorted.slice(0, logCount).forEach((candidate, index) => {
-                console.log(chalk.gray(`   #${index + 1} ${candidate.pair.baseToken.symbol} | Score ${candidate.score.toFixed(2)} | ${candidate.reasons.join(' | ')}`));
+                console.log(chalk.gray(`   #${index + 1} ${candidate.pair.baseToken.symbol} | Score ${candidate.score.toFixed(2)} | Pair ${candidate.pair.pairAddress} | ${candidate.reasons.join(' | ')}`));
             });
         }
 
