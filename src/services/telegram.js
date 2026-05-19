@@ -2,6 +2,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const config = require('../../config.json');
 const storage = require('../utils/storage');
+const { applyRuntimeRiskToPosition, getRuntimeRisk } = require('./runtimeRiskPatch');
 
 class TelegramService {
     constructor() {
@@ -48,6 +49,16 @@ class TelegramService {
         return value;
     }
 
+    saveRuntimeRisk(partialRisk) {
+        const state = storage.getState();
+        state.runtimeRisk = {
+            ...(state.runtimeRisk || {}),
+            ...partialRisk,
+            updatedAt: new Date().toISOString()
+        };
+        storage.saveState(state);
+    }
+
     saveActivePositionIfAny() {
         if (this.engine?.currentPosition) {
             storage.saveActivePosition(this.engine.currentPosition);
@@ -56,40 +67,47 @@ class TelegramService {
 
     setTakeProfit(percent) {
         config.trading.targetProfitPercent = percent;
+        this.saveRuntimeRisk({ targetProfitPercent: percent });
 
         if (this.engine?.currentPosition) {
             this.engine.currentPosition.dynamicTargetProfitPercent = percent;
             this.engine.currentPosition.telegramTargetProfitPercent = percent;
+            this.engine.currentPosition.runtimeRiskAppliedAt = new Date().toISOString();
             this.saveActivePositionIfAny();
         }
     }
 
     setStopLoss(percent) {
         config.trading.stopLossPercent = percent;
+        this.saveRuntimeRisk({ stopLossPercent: percent });
 
         if (this.engine?.currentPosition) {
             this.engine.currentPosition.telegramStopLossPercent = percent;
+            this.engine.currentPosition.runtimeRiskAppliedAt = new Date().toISOString();
             this.saveActivePositionIfAny();
         }
     }
 
     getRuntimeStatusMessage() {
         const position = this.engine?.currentPosition;
-        const activeTp = position?.dynamicTargetProfitPercent || config.trading.targetProfitPercent;
-        const activeSl = position?.telegramStopLossPercent || config.trading.stopLossPercent;
+        const runtimeRisk = getRuntimeRisk();
+        const activeTp = position?.dynamicTargetProfitPercent || runtimeRisk.targetProfitPercent || config.trading.targetProfitPercent;
+        const activeSl = position?.telegramStopLossPercent || runtimeRisk.stopLossPercent || config.trading.stopLossPercent;
+        const savedTp = runtimeRisk.targetProfitPercent || config.trading.targetProfitPercent;
+        const savedSl = runtimeRisk.stopLossPercent || config.trading.stopLossPercent;
 
         if (!position) {
-            return `⚙️ *Runtime Risk Settings*\n━━━━━━━━━━━━━━━━━━\n*TP:* ${config.trading.targetProfitPercent}%\n*SL:* ${config.trading.stopLossPercent}%\n\nTidak ada posisi aktif.`;
+            return `⚙️ *Runtime Risk Settings*\n━━━━━━━━━━━━━━━━━━\n*TP tersimpan:* ${savedTp}%\n*SL tersimpan:* ${savedSl}%\n\nTidak ada posisi aktif. Setting ini akan diterapkan ke entry berikutnya.`;
         }
 
         const openedAt = position.openedAt ? new Date(position.openedAt).toLocaleString('id-ID') : '-';
-        return `⚙️ *Runtime Risk Settings*\n━━━━━━━━━━━━━━━━━━\n*Token:* ${position.symbol}\n*Entry:* $${position.entryPrice}\n*TP aktif:* ${activeTp}%\n*SL aktif:* ${activeSl}%\n*Opened:* ${openedAt}`;
+        return `⚙️ *Runtime Risk Settings*\n━━━━━━━━━━━━━━━━━━\n*Token:* ${position.symbol}\n*Entry:* $${position.entryPrice}\n*TP aktif:* ${activeTp}%\n*SL aktif:* ${activeSl}%\n*TP tersimpan:* ${savedTp}%\n*SL tersimpan:* ${savedSl}%\n*Opened:* ${openedAt}`;
     }
 
     registerCommandHandlers() {
         this.bot.onText(/^\/(start|help)$/i, async (msg) => {
             if (!this.isAuthorized(msg)) return;
-            await this.reply(msg, `🤖 *Nostradamus Bot Commands*\n━━━━━━━━━━━━━━━━━━\n/settp 12 atau /tp 12\nUbah take profit runtime ke 12%\n\n/setsl 8 atau /sl 8\nUbah stop loss runtime ke 8%\n\n/risk\nLihat TP/SL aktif\n\n/position\nLihat posisi aktif`);
+            await this.reply(msg, `🤖 *Nostradamus Bot Commands*\n━━━━━━━━━━━━━━━━━━\n/settp 12 atau /tp 12\nUbah take profit runtime ke 12%\n\n/setsl 8 atau /sl 8\nUbah stop loss runtime ke 8%\n\n/risk\nLihat TP/SL aktif dan TP/SL tersimpan\n\n/position\nLihat posisi aktif`);
         });
 
         this.bot.onText(/^\/(settp|tp)\s+(.+)$/i, async (msg, match) => {
@@ -101,7 +119,8 @@ class TelegramService {
             }
 
             this.setTakeProfit(percent);
-            await this.reply(msg, `✅ Take profit runtime diubah ke *${percent}%*${this.engine?.currentPosition ? ` untuk posisi *${this.engine.currentPosition.symbol}*.` : '. Akan berlaku untuk entry berikutnya.'}`);
+            applyRuntimeRiskToPosition(this.engine);
+            await this.reply(msg, `✅ Take profit runtime disimpan ke *${percent}%*${this.engine?.currentPosition ? ` dan diterapkan ke posisi *${this.engine.currentPosition.symbol}*.` : '. Akan diterapkan ke entry berikutnya.'}`);
         });
 
         this.bot.onText(/^\/(setsl|sl)\s+(.+)$/i, async (msg, match) => {
@@ -113,7 +132,8 @@ class TelegramService {
             }
 
             this.setStopLoss(percent);
-            await this.reply(msg, `✅ Stop loss runtime diubah ke *${percent}%*${this.engine?.currentPosition ? ` untuk posisi *${this.engine.currentPosition.symbol}*.` : '. Akan berlaku untuk entry berikutnya.'}`);
+            applyRuntimeRiskToPosition(this.engine);
+            await this.reply(msg, `✅ Stop loss runtime disimpan ke *${percent}%*${this.engine?.currentPosition ? ` dan diterapkan ke posisi *${this.engine.currentPosition.symbol}*.` : '. Akan diterapkan ke entry berikutnya.'}`);
         });
 
         this.bot.onText(/^\/risk$/i, async (msg) => {
@@ -124,12 +144,13 @@ class TelegramService {
         this.bot.onText(/^\/position$/i, async (msg) => {
             if (!this.isAuthorized(msg)) return;
             const position = this.engine?.currentPosition;
+            const runtimeRisk = getRuntimeRisk();
             if (!position) {
-                await this.reply(msg, 'Tidak ada posisi aktif.');
+                await this.reply(msg, `Tidak ada posisi aktif.\n\nTP tersimpan: *${runtimeRisk.targetProfitPercent || config.trading.targetProfitPercent}%*\nSL tersimpan: *${runtimeRisk.stopLossPercent || config.trading.stopLossPercent}%*`);
                 return;
             }
 
-            await this.reply(msg, `📌 *Posisi Aktif*\n━━━━━━━━━━━━━━━━━━\n*Token:* ${position.symbol}\n*Entry:* $${position.entryPrice}\n*Size:* ${position.positionSize} SOL\n*TP:* ${position.dynamicTargetProfitPercent || config.trading.targetProfitPercent}%\n*SL:* ${position.telegramStopLossPercent || config.trading.stopLossPercent}%\n*CA:* \`${position.address}\``);
+            await this.reply(msg, `📌 *Posisi Aktif*\n━━━━━━━━━━━━━━━━━━\n*Token:* ${position.symbol}\n*Entry:* $${position.entryPrice}\n*Size:* ${position.positionSize} SOL\n*TP:* ${position.dynamicTargetProfitPercent || runtimeRisk.targetProfitPercent || config.trading.targetProfitPercent}%\n*SL:* ${position.telegramStopLossPercent || runtimeRisk.stopLossPercent || config.trading.stopLossPercent}%\n*CA:* \`${position.address}\``);
         });
 
         this.bot.on('polling_error', (error) => {
