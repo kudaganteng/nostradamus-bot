@@ -75,9 +75,9 @@
     "durationSeconds": 10,
     "intervalSeconds": 2,
     "maxDumpPercent": 22,
-    "minTrendPercent": -1,
-    "maxFromPeakPercent": 8,
-    "rejectIfLastTickNegative": false
+    "minTrendPercent": 0,
+    "maxFromPeakPercent": 4,
+    "rejectIfLastTickNegative": true
   },
   "washTrading": {
     "enabled": false,
@@ -109,11 +109,11 @@
     "maxSellPressureRatio": 0.44,
     "minNetBuys5m": 4,
     "minBuys5m": 12,
-    "minPriceChange1m": 0,
-    "minPriceChange5m": -3,
-    "maxPriceChange5m": 120,
-    "maxPriceChange1m": 35,
+    "minPriceChange1m": 0.5,
+    "minPriceChange5m": 0,
+    "maxPriceChange5m": 100,
+    "maxPriceChange1m": 30,
     "rejectPullbackAfterPump": true,
-    "pullbackPump5mThreshold": 15
+    "pullbackPump5mThreshold": 10
   }
 }
