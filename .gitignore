@@ -1,2 +1,9 @@
 (src/services/engine.js)
+.env
 node_modules/*
+backup-data-json/*
+activePosition.json
+botActivity.json
+botState.json
+paperTrades.json
+portfolio.json
