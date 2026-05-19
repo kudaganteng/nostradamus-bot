@@ -16,7 +16,7 @@
     "quoteRetryDelayMs": 1200,
     "sellSolOnly": true,
     "enableRoundTripValidation": true,
-    "maxRoundTripLossPct": 4,
+    "maxRoundTripLossPct": 2.5,
     "minRoundTripOutSol": 0,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
@@ -42,7 +42,7 @@
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
-    "timeLimitMinutes": 10,
+    "timeLimitMinutes": 5,
     "profitLock": {
       "enabled": true,
       "confirmTicks": 2,
@@ -67,16 +67,16 @@
     "hardExitImpactPct": 3,
     "blacklistLossPercent": -15,
     "blacklistExitImpactPct": 5,
-    "cooldownAfterLossMinutes": 60,
+    "cooldownAfterLossMinutes": 360,
     "blacklistAfterLossCount": 2,
     "maxExitTriggerDriftPct": 4
   },
   "observation": {
-    "durationSeconds": 10,
+    "durationSeconds": 12,
     "intervalSeconds": 2,
-    "maxDumpPercent": 25,
-    "minTrendPercent": -1,
-    "maxFromPeakPercent": 8,
+    "maxDumpPercent": 18,
+    "minTrendPercent": 0.8,
+    "maxFromPeakPercent": 6,
     "rejectIfLastTickNegative": true
   },
   "washTrading": {
@@ -93,27 +93,27 @@
     "fakeMomentumMinTransactions5m": 25
   },
   "riskManagement": {
-    "slCooldown1xMinutes": 60,
+    "slCooldown1xMinutes": 360,
     "slCooldown2xMinutes": 1440,
-    "rugpullThresholdPercent": -40
+    "rugpullThresholdPercent": -30
   },
   "filters": {
-    "minLiquidity": 1500,
+    "minLiquidity": 2500,
     "maxLiquidity": 500000,
-    "minAgeMinutes": 30,
+    "minAgeMinutes": 2,
     "maxAgeMinutes": 1440,
-    "minVolume5m": 200,
+    "minVolume5m": 400,
     "volumeAccelRatio": 0.8,
     "buyerAccelRatio": 0.8,
     "minBuySellRatio": 1.1,
-    "maxSellPressureRatio": 0.5,
-    "minNetBuys5m": 2,
-    "minBuys5m": 6,
-    "minPriceChange1m": -0.3,
-    "minPriceChange5m": -1,
-    "maxPriceChange5m": 100,
-    "maxPriceChange1m": 30,
+    "maxSellPressureRatio": 0.52,
+    "minNetBuys5m": 3,
+    "minBuys5m": 10,
+    "minPriceChange1m": 0,
+    "minPriceChange5m": 0.5,
+    "maxPriceChange5m": 150,
+    "maxPriceChange1m": 45,
     "rejectPullbackAfterPump": true,
-    "pullbackPump5mThreshold": 15
+    "pullbackPump5mThreshold": 20
   }
 }
