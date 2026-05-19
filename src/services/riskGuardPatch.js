@@ -12,8 +12,7 @@ function getDailyRiskConfig() {
   return {
     enabled: d.enabled === true,
     maxDailyLossSol: Math.max(0, n(d.maxDailyLossSol, 0.1)),
-    maxDailyLossPercent: Math.max(0, n(d.maxDailyLossPercent, 10)),
-    pauseMinutesAfterDailyLoss: Math.max(1, n(d.pauseMinutesAfterDailyLoss, 1440))
+    maxDailyLossPercent: Math.max(0, n(d.maxDailyLossPercent, 10))
   };
 }
 
@@ -60,6 +59,24 @@ function dailyLossHit() {
   };
 }
 
+function isManuallyPaused(state) {
+  if (state.manualPause?.enabled === true) return true;
+  return state.globalPauseUntil && state.globalPauseUntil > Date.now();
+}
+
+function getManualPauseMessage(state) {
+  if (state.manualPause?.enabled === true) {
+    return `Manual pause aktif${state.manualPause.reason ? `: ${state.manualPause.reason}` : ''}. Gunakan /resume untuk melanjutkan.`;
+  }
+
+  if (state.globalPauseUntil && state.globalPauseUntil > Date.now()) {
+    const minutes = Math.ceil((state.globalPauseUntil - Date.now()) / 60000);
+    return `Pause aktif. Aktif kembali dalam ${minutes} menit atau gunakan /resume.`;
+  }
+
+  return null;
+}
+
 function applyRiskGuardPatch(engine) {
   if (!engine || engine.__riskGuardPatchApplied) return engine;
 
@@ -69,22 +86,18 @@ function applyRiskGuardPatch(engine) {
 
   engine.openPosition = async function patchedOpenPosition(token) {
     const state = storage.getState();
-    if (state.globalPauseUntil && state.globalPauseUntil > Date.now()) {
-      const minutes = Math.ceil((state.globalPauseUntil - Date.now()) / 60000);
-      console.log(`\n[DAILY RISK] Entry ditolak. Global pause masih ${minutes} menit.`);
+    if (isManuallyPaused(state)) {
+      console.log(`\n[MANUAL PAUSE] Entry ditolak. ${getManualPauseMessage(state)}`);
       return;
     }
 
     const daily = dailyLossHit();
     if (daily.hit) {
-      const cfg = getDailyRiskConfig();
-      state.globalPauseUntil = Date.now() + cfg.pauseMinutesAfterDailyLoss * 60 * 1000;
       state.dailyRiskTriggeredAt = new Date().toISOString();
       state.dailyRiskReason = daily.reason;
       storage.saveState(state);
-      activityLogger.log('DAILY_LOSS_LIMIT_HIT', daily);
-      console.log(`\n[DAILY RISK] Entry ditolak: ${daily.reason}`);
-      return;
+      activityLogger.log('DAILY_LOSS_LIMIT_HIT_NO_AUTO_PAUSE', daily);
+      console.log(`\n[DAILY RISK] ${daily.reason}. Auto-pause dinonaktifkan, gunakan /pause jika ingin menghentikan entry.`);
     }
 
     return originalOpenPosition(token);
@@ -125,11 +138,10 @@ function applyRiskGuardPatch(engine) {
     const state = storage.getState();
 
     if (daily.hit) {
-      const d = getDailyRiskConfig();
-      state.globalPauseUntil = Math.max(n(state.globalPauseUntil, 0), Date.now() + d.pauseMinutesAfterDailyLoss * 60 * 1000);
       state.dailyRiskTriggeredAt = new Date().toISOString();
       state.dailyRiskReason = daily.reason;
-      activityLogger.log('DAILY_LOSS_LIMIT_HIT', daily);
+      activityLogger.log('DAILY_LOSS_LIMIT_HIT_NO_AUTO_PAUSE', daily);
+      console.log(`\n[DAILY RISK] ${daily.reason}. Auto-pause dinonaktifkan, gunakan /pause jika ingin menghentikan entry.`);
     }
 
     const trades = require('fs').existsSync('paperTrades.json') ? JSON.parse(require('fs').readFileSync('paperTrades.json', 'utf8')) : [];
@@ -160,3 +172,5 @@ function applyRiskGuardPatch(engine) {
 }
 
 module.exports = applyRiskGuardPatch;
+module.exports.isManuallyPaused = isManuallyPaused;
+module.exports.getManualPauseMessage = getManualPauseMessage;
