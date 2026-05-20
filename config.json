@@ -72,12 +72,12 @@
     "maxExitTriggerDriftPct": 4
   },
   "observation": {
-    "durationSeconds": 12,
+    "durationSeconds": 10,
     "intervalSeconds": 2,
-    "maxDumpPercent": 18,
-    "minTrendPercent": 0.8,
-    "maxFromPeakPercent": 6,
-    "rejectIfLastTickNegative": true
+    "maxDumpPercent": 22,
+    "minTrendPercent": -0.3,
+    "maxFromPeakPercent": 8,
+    "rejectIfLastTickNegative": false
   },
   "washTrading": {
     "enabled": false,
