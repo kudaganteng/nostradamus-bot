@@ -42,7 +42,7 @@
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
     "trailingStopPercent": 3,
-    "timeLimitMinutes": 5,
+    "timeLimitMinutes": 10,
     "profitLock": {
       "enabled": true,
       "confirmTicks": 2,
