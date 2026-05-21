@@ -23,13 +23,27 @@ function getNetSolPnl(position, quoteSnapshot) {
   const netProfitSol = exitSol - entrySol - entryFeeSol - exitFeeSol;
   const netPnlPercent = entrySol > 0 ? (netProfitSol / entrySol) * 100 : 0;
   const grossPnlPercent = entrySol > 0 ? ((exitSol - entrySol) / entrySol) * 100 : 0;
-
   return { entrySol, exitSol, entryFeeSol, exitFeeSol, netProfitSol, netPnlPercent, grossPnlPercent };
 }
 
 function syntheticPriceFromPnl(position, pnlPercent) {
   const entryPrice = n(position.entryPrice, 0);
   return entryPrice > 0 ? entryPrice * (1 + pnlPercent / 100) : 0;
+}
+
+function writeStatusLine(message) {
+  const columns = process.stdout.columns || 120;
+  const maxLen = Math.max(40, columns - 2);
+  const clean = String(message).replace(/\s+/g, ' ');
+  const clipped = clean.length > maxLen ? `${clean.slice(0, maxLen - 3)}...` : clean;
+
+  if (process.stdout.clearLine && process.stdout.cursorTo) {
+    process.stdout.clearLine(0);
+    process.stdout.cursorTo(0);
+    process.stdout.write(clipped);
+  } else {
+    process.stdout.write(`\r${clipped.padEnd(maxLen, ' ')}`);
+  }
 }
 
 function getExitKind(reason = '') {
@@ -58,15 +72,12 @@ function shouldCancelExit({ kind, triggerPnl, confirmPnl, threshold }) {
   if (kind === 'take_profit' && confirmPnl < threshold) {
     return { cancel: true, reason: `TP tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% < target ${threshold}%` };
   }
-
   if (kind === 'stop_loss' && confirmPnl > threshold) {
     return { cancel: true, reason: `SL tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% > SL ${threshold}%` };
   }
-
   if (kind === 'profit_lock' && (confirmPnl < 0 || (threshold > 0 && confirmPnl > threshold))) {
     return { cancel: true, reason: `Profit lock tidak valid lagi: confirm ${confirmPnl.toFixed(2)}%, lock ${threshold}%` };
   }
-
   if (kind === 'trailing_stop' && confirmPnl < 0) {
     return { cancel: true, reason: `Trailing profit berubah negatif: confirm ${confirmPnl.toFixed(2)}%` };
   }
@@ -99,7 +110,7 @@ function patchLastTradeReasonIfNeeded() {
 
     if (degradedProfitExit) {
       last.originalReason = last.reason;
-      last.reason = `⚠️ SELL_REQUOTE_DEGRADED: indikasi ${indicativePnl.toFixed(2)}%, final ${finalPnl.toFixed(2)}%`;
+      last.reason = `SELL_REQUOTE_DEGRADED: indikasi ${indicativePnl.toFixed(2)}%, final ${finalPnl.toFixed(2)}%`;
       last.executionMismatch = true;
       trades[trades.length - 1] = last;
       fs.writeFileSync(tradesFile, JSON.stringify(trades, null, 2), 'utf8');
@@ -135,7 +146,7 @@ function applySolPnlPatch(engine) {
 
         const quoteSnapshot = await this.getIndicativePriceFromJupiterQuote();
         if (!quoteSnapshot || !quoteSnapshot.exitSolAmount) {
-          console.log(chalk.red('Gagal mendapatkan exitSolAmount Jupiter terbaru, mencoba lagi...'));
+          console.log(chalk.red('\nGagal mendapatkan exitSolAmount Jupiter terbaru, mencoba lagi...'));
           return;
         }
 
@@ -166,7 +177,9 @@ function applySolPnlPatch(engine) {
         }
 
         const maxPnl = n(this.currentPosition.maxSolPnlPercent, pnl);
-        process.stdout.write(chalk.white(`\rMonitoring ${this.currentPosition.symbol}: Net SOL PNL ${pnl.toFixed(2)}% | Gross ${grossPnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Out ${solPnl.exitSol.toFixed(6)} SOL | Impact ${quoteSnapshot.priceImpactPct}%    `));
+        writeStatusLine(
+          `Monitoring ${this.currentPosition.symbol}: Net ${pnl.toFixed(2)}% | Gross ${grossPnl.toFixed(2)}% | Max ${maxPnl.toFixed(2)}% | Out ${solPnl.exitSol.toFixed(6)} SOL | Impact ${n(quoteSnapshot.priceImpactPct, 0).toFixed(4)}%`
+        );
         this.checkExitConditions(currentPrice, pnl, maxPnl);
       } catch (error) {
         console.error(chalk.red('\nError refresh quote Jupiter SOL PNL:'), error.message);
