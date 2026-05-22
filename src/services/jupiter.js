@@ -20,6 +20,12 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function isRateLimited(error) {
+    const status = error?.response?.status;
+    const message = String(error?.message || '').toLowerCase();
+    return status === 429 || message.includes('429') || message.includes('rate limit');
+}
+
 function getJupiterHeaders() {
     const headers = {};
     const apiKey = process.env.JUPITER_API_KEY;
@@ -34,9 +40,11 @@ function getExecutionConfig() {
         maxPriceImpactPct: config.jupiter?.maxPriceImpactPct ?? 5,
         maxEntryPriceImpactPct: config.jupiter?.maxEntryPriceImpactPct ?? config.jupiter?.maxPriceImpactPct ?? 5,
         maxExitPriceImpactPct: config.jupiter?.maxExitPriceImpactPct ?? config.jupiter?.maxPriceImpactPct ?? 5,
-        requestMinIntervalMs: config.jupiter?.requestMinIntervalMs ?? 350,
-        quoteRetryCount: config.jupiter?.quoteRetryCount ?? 1,
-        quoteRetryDelayMs: config.jupiter?.quoteRetryDelayMs ?? 1200,
+        requestMinIntervalMs: config.jupiter?.requestMinIntervalMs ?? 500,
+        quoteRetryCount: config.jupiter?.quoteRetryCount ?? 2,
+        quoteRetryDelayMs: config.jupiter?.quoteRetryDelayMs ?? 1500,
+        sameSizeRetryOn429: config.jupiter?.sameSizeRetryOn429 ?? 1,
+        sameSizeRetryDelayMs: config.jupiter?.sameSizeRetryDelayMs ?? 2500,
         sellSolOnly: config.jupiter?.sellSolOnly !== false,
         enableRoundTripValidation: config.jupiter?.enableRoundTripValidation ?? true,
         maxRoundTripLossPct: config.jupiter?.maxRoundTripLossPct ?? 5,
@@ -98,29 +106,22 @@ class JupiterService {
                     }
                 });
 
-                if (!response.data || !response.data.outAmount) {
-                    throw new Error('Jupiter quote tidak mengembalikan outAmount.');
-                }
+                if (!response.data || !response.data.outAmount) throw new Error('Jupiter quote tidak mengembalikan outAmount.');
 
                 const maxPriceImpactPct = options.maxPriceImpactPct ?? execConfig.maxPriceImpactPct;
                 const priceImpactPct = Number(response.data.priceImpactPct || 0);
                 if (Number.isFinite(priceImpactPct) && priceImpactPct > maxPriceImpactPct) {
-                    throw new PriceImpactError(
-                        `Price impact Jupiter terlalu tinggi: ${priceImpactPct}% > ${maxPriceImpactPct}%`,
-                        priceImpactPct,
-                        maxPriceImpactPct
-                    );
+                    throw new PriceImpactError(`Price impact Jupiter terlalu tinggi: ${priceImpactPct}% > ${maxPriceImpactPct}%`, priceImpactPct, maxPriceImpactPct);
                 }
 
                 return response.data;
             } catch (error) {
                 lastError = error;
-                const is429 = error?.response?.status === 429 || String(error.message || '').includes('429');
-                if (!is429 || attempt >= retryCount) break;
+                const hit429 = isRateLimited(error);
+                if (!hit429 || attempt >= retryCount) break;
                 await sleep(execConfig.quoteRetryDelayMs * (attempt + 1));
             }
         }
-
         throw lastError;
     }
 
@@ -141,21 +142,7 @@ class JupiterService {
         const sellImpactPct = Number(sellQuote.priceImpactPct || 0);
         const tokenAmount = fromRawAmount(buyQuote.outAmount, tokenDecimals);
 
-        const details = {
-            accepted: true,
-            positionSizeSol,
-            tokenAmount,
-            tokenOutRaw: buyQuote.outAmount,
-            roundTripOutSol,
-            netRoundTripOutSol,
-            estimatedFeesSol,
-            roundTripLossPct,
-            sellImpactPct,
-            maxRoundTripLossPct: execConfig.maxRoundTripLossPct,
-            maxExitPriceImpactPct: execConfig.maxExitPriceImpactPct,
-            minRoundTripOutSol: execConfig.minRoundTripOutSol,
-            sellQuote
-        };
+        const details = { accepted: true, positionSizeSol, tokenAmount, tokenOutRaw: buyQuote.outAmount, roundTripOutSol, netRoundTripOutSol, estimatedFeesSol, roundTripLossPct, sellImpactPct, maxRoundTripLossPct: execConfig.maxRoundTripLossPct, maxExitPriceImpactPct: execConfig.maxExitPriceImpactPct, minRoundTripOutSol: execConfig.minRoundTripOutSol, sellQuote };
 
         if (roundTripLossPct > execConfig.maxRoundTripLossPct) {
             details.accepted = false;
@@ -177,25 +164,16 @@ class JupiterService {
 
         const entryPriceUsd = solUsdValue / tokenAmount;
         const estimatedFeeSol = this.estimateSwapCostSol();
+        return { source: 'jupiter_quote', inputMint: SOL_MINT, outputMint: tokenMint, selectedMultiplier, requestedPositionSizeSol: config.trading?.positionSize, executedPositionSizeSol: positionSizeSol, solInRaw: buyQuote.inAmount, tokenOutRaw: buyQuote.outAmount, tokenAmount, solUsdValue, entryPriceUsd, priceImpactPct: Number(buyQuote.priceImpactPct || 0), estimatedFeeSol, roundTrip, quoteAttempts, quote: buyQuote };
+    }
 
-        return {
-            source: 'jupiter_quote',
-            inputMint: SOL_MINT,
-            outputMint: tokenMint,
-            selectedMultiplier,
-            requestedPositionSizeSol: config.trading?.positionSize,
-            executedPositionSizeSol: positionSizeSol,
-            solInRaw: buyQuote.inAmount,
-            tokenOutRaw: buyQuote.outAmount,
-            tokenAmount,
-            solUsdValue,
-            entryPriceUsd,
-            priceImpactPct: Number(buyQuote.priceImpactPct || 0),
-            estimatedFeeSol,
-            roundTrip,
-            quoteAttempts,
-            quote: buyQuote
-        };
+    async tryBuyExecutionForSize(tokenMint, candidatePositionSizeSol, tokenDecimals) {
+        const execConfig = getExecutionConfig();
+        const solInRaw = toRawAmount(candidatePositionSizeSol, SOL_DECIMALS);
+        const buyQuote = await this.getQuote(SOL_MINT, tokenMint, solInRaw, { maxPriceImpactPct: execConfig.maxEntryPriceImpactPct });
+        const roundTrip = await this.validateRoundTrip({ tokenMint, positionSizeSol: candidatePositionSizeSol, tokenDecimals, buyQuote });
+        const solUsdQuote = await this.getQuote(SOL_MINT, USDC_MINT, solInRaw, { maxPriceImpactPct: 100 });
+        return { buyQuote, roundTrip, solUsdQuote };
     }
 
     async getBuyExecution(tokenMint, requestedPositionSizeSol, tokenDecimals) {
@@ -210,34 +188,29 @@ class JupiterService {
                 continue;
             }
 
-            try {
-                const solInRaw = toRawAmount(candidatePositionSizeSol, SOL_DECIMALS);
-                const buyQuote = await this.getQuote(SOL_MINT, tokenMint, solInRaw, { maxPriceImpactPct: execConfig.maxEntryPriceImpactPct });
-                const roundTrip = await this.validateRoundTrip({ tokenMint, positionSizeSol: candidatePositionSizeSol, tokenDecimals, buyQuote });
-                const solUsdQuote = await this.getQuote(SOL_MINT, USDC_MINT, solInRaw, { maxPriceImpactPct: 100 });
+            let lastRateLimitError = null;
+            const sameSizeAttempts = 1 + Math.max(0, Number(execConfig.sameSizeRetryOn429));
+            for (let sameSizeAttempt = 1; sameSizeAttempt <= sameSizeAttempts; sameSizeAttempt++) {
+                try {
+                    const { buyQuote, roundTrip, solUsdQuote } = await this.tryBuyExecutionForSize(tokenMint, candidatePositionSizeSol, tokenDecimals);
+                    quoteAttempts.push({ multiplier, positionSizeSol: candidatePositionSizeSol, sameSizeAttempt, priceImpactPct: Number(buyQuote.priceImpactPct || 0), roundTripLossPct: roundTrip.roundTripLossPct, roundTripOutSol: roundTrip.roundTripOutSol, sellImpactPct: roundTrip.sellImpactPct, accepted: true });
+                    return this.buildBuyExecution(tokenMint, candidatePositionSizeSol, tokenDecimals, buyQuote, solUsdQuote, multiplier, quoteAttempts, roundTrip);
+                } catch (error) {
+                    if (isRateLimited(error) && sameSizeAttempt < sameSizeAttempts) {
+                        lastRateLimitError = error;
+                        quoteAttempts.push({ multiplier, positionSizeSol: candidatePositionSizeSol, sameSizeAttempt, rejected: true, retrySameSize: true, reason: error.message });
+                        await sleep(execConfig.sameSizeRetryDelayMs * sameSizeAttempt);
+                        continue;
+                    }
 
-                quoteAttempts.push({
-                    multiplier,
-                    positionSizeSol: candidatePositionSizeSol,
-                    priceImpactPct: Number(buyQuote.priceImpactPct || 0),
-                    roundTripLossPct: roundTrip.roundTripLossPct,
-                    roundTripOutSol: roundTrip.roundTripOutSol,
-                    sellImpactPct: roundTrip.sellImpactPct,
-                    accepted: true
-                });
+                    quoteAttempts.push({ multiplier, positionSizeSol: candidatePositionSizeSol, sameSizeAttempt, rejected: true, priceImpactPct: error.priceImpactPct, roundTripLossPct: error.details?.roundTripLossPct, roundTripOutSol: error.details?.roundTripOutSol, sellImpactPct: error.details?.sellImpactPct, rateLimited: isRateLimited(error), reason: error.message });
+                    if (isRateLimited(error)) lastRateLimitError = error;
+                    break;
+                }
+            }
 
-                return this.buildBuyExecution(tokenMint, candidatePositionSizeSol, tokenDecimals, buyQuote, solUsdQuote, multiplier, quoteAttempts, roundTrip);
-            } catch (error) {
-                quoteAttempts.push({
-                    multiplier,
-                    positionSizeSol: candidatePositionSizeSol,
-                    rejected: true,
-                    priceImpactPct: error.priceImpactPct,
-                    roundTripLossPct: error.details?.roundTripLossPct,
-                    roundTripOutSol: error.details?.roundTripOutSol,
-                    sellImpactPct: error.details?.sellImpactPct,
-                    reason: error.message
-                });
+            if (lastRateLimitError) {
+                await sleep(execConfig.sameSizeRetryDelayMs);
             }
         }
 
@@ -249,34 +222,14 @@ class JupiterService {
         const sellQuote = await this.getQuote(tokenMint, SOL_MINT, tokenAmountRaw, { maxPriceImpactPct: execConfig.maxExitPriceImpactPct });
         const tokenAmount = fromRawAmount(tokenAmountRaw, tokenDecimals);
         const exitSolAmount = fromRawAmount(sellQuote.outAmount, SOL_DECIMALS);
-        const solUsdQuote = await this.getQuote(SOL_MINT, USDC_MINT, sellQuote.outAmount, { maxPriceImpactPct: 100 });
-        const exitUsdValue = fromRawAmount(solUsdQuote.outAmount, USDC_DECIMALS);
-        const exitPriceUsd = tokenAmount > 0 ? exitUsdValue / tokenAmount : 0;
         const estimatedFeeSol = this.estimateSwapCostSol();
-        if (!exitSolAmount || !exitPriceUsd) throw new Error('Gagal menghitung SOL/USD exit dari quote Jupiter.');
-
-        return {
-            source: 'jupiter_quote_sol_only',
-            inputMint: tokenMint,
-            outputMint: SOL_MINT,
-            tokenInRaw: tokenAmountRaw,
-            solOutRaw: sellQuote.outAmount,
-            tokenAmount,
-            exitSolAmount,
-            exitUsdValue,
-            exitPriceUsd,
-            priceImpactPct: Number(sellQuote.priceImpactPct || 0),
-            estimatedFeeSol,
-            quote: sellQuote,
-            solUsdQuote
-        };
+        if (!exitSolAmount) throw new Error('Gagal menghitung SOL exit dari quote Jupiter.');
+        return { source: 'jupiter_quote_sol_only', inputMint: tokenMint, outputMint: SOL_MINT, tokenInRaw: tokenAmountRaw, solOutRaw: sellQuote.outAmount, tokenAmount, exitSolAmount, exitUsdValue: 0, exitPriceUsd: 0, priceImpactPct: Number(sellQuote.priceImpactPct || 0), estimatedFeeSol, quote: sellQuote };
     }
 
     async getSellExecution(tokenMint, tokenAmountRaw, tokenDecimals, options = {}) {
         const execConfig = getExecutionConfig();
-        if (options.solOnly === true || execConfig.sellSolOnly === true) {
-            return this.getSellSolExecution(tokenMint, tokenAmountRaw, tokenDecimals);
-        }
+        if (options.solOnly === true || execConfig.sellSolOnly === true) return this.getSellSolExecution(tokenMint, tokenAmountRaw, tokenDecimals);
 
         const sellQuote = await this.getQuote(tokenMint, SOL_MINT, tokenAmountRaw, { maxPriceImpactPct: execConfig.maxExitPriceImpactPct });
         const tokenUsdQuote = await this.getQuote(tokenMint, USDC_MINT, tokenAmountRaw, { maxPriceImpactPct: 100 });
@@ -286,21 +239,7 @@ class JupiterService {
         const exitPriceUsd = tokenAmount > 0 ? exitUsdValue / tokenAmount : 0;
         const estimatedFeeSol = this.estimateSwapCostSol();
         if (!exitSolAmount) throw new Error('Gagal menghitung harga exit dari quote Jupiter.');
-
-        return {
-            source: 'jupiter_quote',
-            inputMint: tokenMint,
-            outputMint: SOL_MINT,
-            tokenInRaw: tokenAmountRaw,
-            solOutRaw: sellQuote.outAmount,
-            tokenAmount,
-            exitSolAmount,
-            exitUsdValue,
-            exitPriceUsd,
-            priceImpactPct: Number(sellQuote.priceImpactPct || 0),
-            estimatedFeeSol,
-            quote: sellQuote
-        };
+        return { source: 'jupiter_quote', inputMint: tokenMint, outputMint: SOL_MINT, tokenInRaw: tokenAmountRaw, solOutRaw: sellQuote.outAmount, tokenAmount, exitSolAmount, exitUsdValue, exitPriceUsd, priceImpactPct: Number(sellQuote.priceImpactPct || 0), estimatedFeeSol, quote: sellQuote };
     }
 }
 
