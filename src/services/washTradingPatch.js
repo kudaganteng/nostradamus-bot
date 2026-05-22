@@ -5,6 +5,7 @@ const activityLogger = require('../utils/activityLogger');
 const applySolPnlPatch = require('./solPnlPatch');
 const applyProfitLockPatch = require('./profitLockPatch');
 const applyRiskGuardPatch = require('./riskGuardPatch');
+const applyPreEntryStabilityPatch = require('./preEntryStabilityPatch');
 
 function n(value, fallback = 0) {
   const parsed = Number(value);
@@ -68,6 +69,7 @@ function applyWashTradingPatch(engine) {
   applySolPnlPatch(engine);
   applyProfitLockPatch(engine);
   applyRiskGuardPatch(engine);
+  applyPreEntryStabilityPatch(engine);
   if (engine.__washTradingPatchApplied) return engine;
 
   engine.checkWashTrading = async function patchedCheckWashTrading(tokenAddress, pairAddress, pairSnapshot = null) {
