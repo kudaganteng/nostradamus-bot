@@ -23,6 +23,14 @@
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
   },
+  "preEntryStability": {
+    "enabled": true,
+    "delayMs": 2500,
+    "maxBuyQuoteWorseningPct": 1.5,
+    "maxRoundTripLossWorseningPct": 0.75,
+    "rejectIfSecondQuoteFails": true,
+    "rejectIfPositionSizeDrops": true
+  },
   "execution": {
     "simulateLatency": true,
     "minLatencyMs": 1000,
