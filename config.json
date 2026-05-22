@@ -11,9 +11,11 @@
     "maxPriceImpactPct": 5,
     "maxEntryPriceImpactPct": 3,
     "maxExitPriceImpactPct": 3,
-    "requestMinIntervalMs": 350,
-    "quoteRetryCount": 1,
-    "quoteRetryDelayMs": 1200,
+    "requestMinIntervalMs": 500,
+    "quoteRetryCount": 2,
+    "quoteRetryDelayMs": 1500,
+    "sameSizeRetryOn429": 1,
+    "sameSizeRetryDelayMs": 2500,
     "sellSolOnly": true,
     "enableRoundTripValidation": true,
     "maxRoundTripLossPct": 2.5,
@@ -37,7 +39,7 @@
   },
   "trading": {
     "paperBalance": 1.0,
-    "positionSize": 0.2,
+    "positionSize": 0.15,
     "targetProfitPercent": 10,
     "stopLossPercent": 7,
     "trailingStartPercent": 7,
@@ -47,6 +49,7 @@
       "enabled": true,
       "confirmTicks": 2,
       "tiers": [
+        { "maxPnl": 3.5, "lockPnl": 0.5 },
         { "maxPnl": 5, "lockPnl": 1.5 },
         { "maxPnl": 8, "lockPnl": 3 },
         { "maxPnl": 12, "lockPnl": 5 },
@@ -62,11 +65,15 @@
   },
   "exitRisk": {
     "enabled": true,
-    "softExitImpactPct": 1,
+    "softExitImpactPct": 0.05,
     "softConfirmTicks": 2,
-    "hardExitImpactPct": 3,
-    "blacklistLossPercent": -15,
-    "blacklistExitImpactPct": 5,
+    "hardExitImpactPct": 0.2,
+    "rugpullExitImpactPct": 0.5,
+    "rugpullPnlPercent": -25,
+    "rugpullOutputDropPct": 30,
+    "nearZeroExitSolPct": 10,
+    "blacklistLossPercent": -12,
+    "blacklistExitImpactPct": 0.15,
     "cooldownAfterLossMinutes": 360,
     "blacklistAfterLossCount": 2,
     "maxExitTriggerDriftPct": 4
@@ -95,7 +102,7 @@
   "riskManagement": {
     "slCooldown1xMinutes": 360,
     "slCooldown2xMinutes": 1440,
-    "rugpullThresholdPercent": -30
+    "rugpullThresholdPercent": -25
   },
   "filters": {
     "minLiquidity": 2500,
