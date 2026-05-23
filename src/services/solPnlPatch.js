@@ -31,6 +31,17 @@ function getExitRiskConfig() {
   };
 }
 
+function getStagnationConfig() {
+  const s = config.stagnationExit || {};
+  return {
+    enabled: s.enabled === true,
+    rules: Array.isArray(s.rules) ? s.rules : [],
+    exitIfImpactAbove: n(s.exitIfImpactAbove, 0.02),
+    exitIfPnlBelow: n(s.exitIfPnlBelow, 0),
+    ignoreIfMaxPnlAbove: n(s.ignoreIfMaxPnlAbove, 3.5)
+  };
+}
+
 function getNetSolPnl(position, quoteSnapshot) {
   const entrySol = n(position.entrySolValue, n(position.positionSize, 0));
   const exitSol = n(quoteSnapshot.exitSolAmount, 0);
@@ -69,6 +80,7 @@ function getExitKind(reason = '') {
   if (text.includes('Trailing Stop')) return 'trailing_stop';
   if (text.includes('Exit Impact') || text.includes('RUGPULL') || text.includes('Rugpull') || text.includes('Hard Guard')) return 'emergency';
   if (text.includes('Time Limit')) return 'time_limit';
+  if (text.includes('Stagnation')) return 'time_limit';
   return 'other';
 }
 
@@ -118,25 +130,39 @@ function getImpactExitReason(position, solPnl, quoteSnapshot) {
   position.exitImpactConfirmTicks = n(position.exitImpactConfirmTicks, 0);
   position.lastExitImpactPct = impact;
 
-  if (impact >= risk.hardExitImpactPct) {
-    return `🚨 Exit Impact Hard Guard: impact ${impact.toFixed(4)} >= ${risk.hardExitImpactPct}`;
-  }
-
-  if (impact >= risk.impactImmediatePct) {
-    return `⚠️ Exit Impact Immediate Guard: impact ${impact.toFixed(4)} >= ${risk.impactImmediatePct}`;
-  }
-
-  if (impact >= risk.softExitImpactPct && solPnl.netPnlPercent <= risk.impactNegativePnlThreshold) {
-    return `⚠️ Exit Impact Negative PNL Guard: impact ${impact.toFixed(4)} >= ${risk.softExitImpactPct}, PNL ${solPnl.netPnlPercent.toFixed(2)}% <= ${risk.impactNegativePnlThreshold}%`;
-  }
+  if (impact >= risk.hardExitImpactPct) return `🚨 Exit Impact Hard Guard: impact ${impact.toFixed(4)} >= ${risk.hardExitImpactPct}`;
+  if (impact >= risk.impactImmediatePct) return `⚠️ Exit Impact Immediate Guard: impact ${impact.toFixed(4)} >= ${risk.impactImmediatePct}`;
+  if (impact >= risk.softExitImpactPct && solPnl.netPnlPercent <= risk.impactNegativePnlThreshold) return `⚠️ Exit Impact Negative PNL Guard: impact ${impact.toFixed(4)} >= ${risk.softExitImpactPct}, PNL ${solPnl.netPnlPercent.toFixed(2)}% <= ${risk.impactNegativePnlThreshold}%`;
 
   if (impact >= risk.softExitImpactPct) {
     position.exitImpactConfirmTicks += 1;
-    if (position.exitImpactConfirmTicks >= risk.softConfirmTicks) {
-      return `⚠️ Exit Impact Soft Guard: impact ${impact.toFixed(4)} selama ${risk.softConfirmTicks} tick`;
-    }
+    if (position.exitImpactConfirmTicks >= risk.softConfirmTicks) return `⚠️ Exit Impact Soft Guard: impact ${impact.toFixed(4)} selama ${risk.softConfirmTicks} tick`;
   } else {
     position.exitImpactConfirmTicks = 0;
+  }
+  return null;
+}
+
+function getStagnationExitReason(position, solPnl, quoteSnapshot) {
+  const cfg = getStagnationConfig();
+  if (!cfg.enabled || !position.openedAt) return null;
+
+  const ageMinutes = (Date.now() - new Date(position.openedAt).getTime()) / 60000;
+  const maxPnl = n(position.maxSolPnlPercent, solPnl.netPnlPercent);
+  const impact = Math.abs(n(quoteSnapshot.priceImpactPct, 0));
+
+  if (maxPnl >= cfg.ignoreIfMaxPnlAbove) return null;
+
+  for (const rule of cfg.rules) {
+    const afterMinutes = n(rule.afterMinutes, 0);
+    const maxPnlBelow = n(rule.maxPnlBelow, 0);
+    if (ageMinutes >= afterMinutes && maxPnl < maxPnlBelow) {
+      return `⌛ Stagnation Exit: ${rule.reason || `${afterMinutes}m maxPnl < ${maxPnlBelow}%`} | Max ${maxPnl.toFixed(2)}% | Now ${solPnl.netPnlPercent.toFixed(2)}%`;
+    }
+  }
+
+  if (ageMinutes >= 5 && impact > cfg.exitIfImpactAbove && solPnl.netPnlPercent < cfg.exitIfPnlBelow) {
+    return `⌛ Stagnation Exit: impact ${impact.toFixed(4)} > ${cfg.exitIfImpactAbove} dan PNL ${solPnl.netPnlPercent.toFixed(2)}% < ${cfg.exitIfPnlBelow}%`;
   }
 
   return null;
@@ -227,6 +253,13 @@ function applySolPnlPatch(engine) {
         if (impactExitReason) {
           activityLogger.log('EXIT_IMPACT_GUARD_TRIGGERED', { symbol: this.currentPosition.symbol, address: this.currentPosition.address, reason: impactExitReason, pnl, grossPnl, exitSolAmount: solPnl.exitSol, previousExitSolAmount, priceImpactPct: quoteSnapshot.priceImpactPct, confirmTicks: this.currentPosition.exitImpactConfirmTicks });
           this.closePosition(currentPrice, pnl, impactExitReason);
+          return;
+        }
+
+        const stagnationReason = getStagnationExitReason(this.currentPosition, solPnl, quoteSnapshot);
+        if (stagnationReason) {
+          activityLogger.log('STAGNATION_EXIT_TRIGGERED', { symbol: this.currentPosition.symbol, address: this.currentPosition.address, reason: stagnationReason, pnl, grossPnl, maxPnl, exitSolAmount: solPnl.exitSol, priceImpactPct: quoteSnapshot.priceImpactPct });
+          this.closePosition(currentPrice, pnl, stagnationReason);
           return;
         }
 
