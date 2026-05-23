@@ -18,9 +18,15 @@ function isRateLimited(error) {
 function getExitRiskConfig() {
   const e = config.exitRisk || {};
   return {
-    rugpullPnlPercent: n(e.rugpullPnlPercent, -25),
-    rugpullExitImpactPct: n(e.rugpullExitImpactPct, 0.5),
-    rugpullOutputDropPct: n(e.rugpullOutputDropPct, 30),
+    enabled: e.enabled !== false,
+    softExitImpactPct: n(e.softExitImpactPct, 0.05),
+    softConfirmTicks: Math.max(1, n(e.softConfirmTicks, 2)),
+    impactNegativePnlThreshold: n(e.impactNegativePnlThreshold, -3),
+    impactImmediatePct: n(e.impactImmediatePct, 0.08),
+    hardExitImpactPct: n(e.hardExitImpactPct, 0.2),
+    rugpullPnlPercent: n(e.rugpullPnlPercent, -18),
+    rugpullExitImpactPct: n(e.rugpullExitImpactPct, 0.35),
+    rugpullOutputDropPct: n(e.rugpullOutputDropPct, 20),
     nearZeroExitSolPct: n(e.nearZeroExitSolPct, 10)
   };
 }
@@ -104,6 +110,38 @@ function getRugpullReason(position, solPnl, quoteSnapshot) {
   return null;
 }
 
+function getImpactExitReason(position, solPnl, quoteSnapshot) {
+  const risk = getExitRiskConfig();
+  if (!risk.enabled) return null;
+
+  const impact = Math.abs(n(quoteSnapshot.priceImpactPct, 0));
+  position.exitImpactConfirmTicks = n(position.exitImpactConfirmTicks, 0);
+  position.lastExitImpactPct = impact;
+
+  if (impact >= risk.hardExitImpactPct) {
+    return `🚨 Exit Impact Hard Guard: impact ${impact.toFixed(4)} >= ${risk.hardExitImpactPct}`;
+  }
+
+  if (impact >= risk.impactImmediatePct) {
+    return `⚠️ Exit Impact Immediate Guard: impact ${impact.toFixed(4)} >= ${risk.impactImmediatePct}`;
+  }
+
+  if (impact >= risk.softExitImpactPct && solPnl.netPnlPercent <= risk.impactNegativePnlThreshold) {
+    return `⚠️ Exit Impact Negative PNL Guard: impact ${impact.toFixed(4)} >= ${risk.softExitImpactPct}, PNL ${solPnl.netPnlPercent.toFixed(2)}% <= ${risk.impactNegativePnlThreshold}%`;
+  }
+
+  if (impact >= risk.softExitImpactPct) {
+    position.exitImpactConfirmTicks += 1;
+    if (position.exitImpactConfirmTicks >= risk.softConfirmTicks) {
+      return `⚠️ Exit Impact Soft Guard: impact ${impact.toFixed(4)} selama ${risk.softConfirmTicks} tick`;
+    }
+  } else {
+    position.exitImpactConfirmTicks = 0;
+  }
+
+  return null;
+}
+
 function patchLastTradeReasonIfNeeded() {
   const tradesFile = path.join(process.cwd(), 'paperTrades.json');
   if (!fs.existsSync(tradesFile)) return;
@@ -182,6 +220,13 @@ function applySolPnlPatch(engine) {
         if (rugpullReason) {
           activityLogger.log('RUGPULL_EMERGENCY_EXIT_TRIGGERED', { symbol: this.currentPosition.symbol, address: this.currentPosition.address, reason: rugpullReason, pnl, grossPnl, exitSolAmount: solPnl.exitSol, previousExitSolAmount, priceImpactPct: quoteSnapshot.priceImpactPct });
           this.closePosition(currentPrice, pnl, rugpullReason);
+          return;
+        }
+
+        const impactExitReason = getImpactExitReason(this.currentPosition, solPnl, quoteSnapshot);
+        if (impactExitReason) {
+          activityLogger.log('EXIT_IMPACT_GUARD_TRIGGERED', { symbol: this.currentPosition.symbol, address: this.currentPosition.address, reason: impactExitReason, pnl, grossPnl, exitSolAmount: solPnl.exitSol, previousExitSolAmount, priceImpactPct: quoteSnapshot.priceImpactPct, confirmTicks: this.currentPosition.exitImpactConfirmTicks });
+          this.closePosition(currentPrice, pnl, impactExitReason);
           return;
         }
 
