@@ -18,7 +18,7 @@
     "sameSizeRetryDelayMs": 2500,
     "sellSolOnly": true,
     "enableRoundTripValidation": true,
-    "maxRoundTripLossPct": 3,
+    "maxRoundTripLossPct": 2.5,
     "minRoundTripOutSol": 0,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
@@ -75,10 +75,12 @@
     "enabled": true,
     "softExitImpactPct": 0.05,
     "softConfirmTicks": 2,
+    "impactNegativePnlThreshold": -3,
+    "impactImmediatePct": 0.08,
     "hardExitImpactPct": 0.2,
-    "rugpullExitImpactPct": 0.5,
-    "rugpullPnlPercent": -25,
-    "rugpullOutputDropPct": 30,
+    "rugpullExitImpactPct": 0.35,
+    "rugpullPnlPercent": -18,
+    "rugpullOutputDropPct": 20,
     "nearZeroExitSolPct": 10,
     "blacklistLossPercent": -12,
     "blacklistExitImpactPct": 0.15,
@@ -110,7 +112,7 @@
   "riskManagement": {
     "slCooldown1xMinutes": 360,
     "slCooldown2xMinutes": 1440,
-    "rugpullThresholdPercent": -25
+    "rugpullThresholdPercent": -18
   },
   "filters": {
     "minLiquidity": 2500,
