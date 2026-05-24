@@ -11,6 +11,7 @@
     "maxPriceImpactPct": 5,
     "maxEntryPriceImpactPct": 3,
     "maxExitPriceImpactPct": 3,
+    "maxRoundTripSellImpactPct": 0.05,
     "requestMinIntervalMs": 500,
     "quoteRetryCount": 2,
     "quoteRetryDelayMs": 1500,
