@@ -12,6 +12,8 @@
     "maxEntryPriceImpactPct": 3,
     "maxExitPriceImpactPct": 3,
     "maxRoundTripSellImpactPct": 0.05,
+    "highRoundTripLossPct": 2.5,
+    "highRoundTripMaxPositionSizeSol": 0.075,
     "requestMinIntervalMs": 500,
     "quoteRetryCount": 2,
     "quoteRetryDelayMs": 1500,
