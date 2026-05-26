@@ -41,6 +41,8 @@ function getExecutionConfig() {
         maxEntryPriceImpactPct: config.jupiter?.maxEntryPriceImpactPct ?? config.jupiter?.maxPriceImpactPct ?? 5,
         maxExitPriceImpactPct: config.jupiter?.maxExitPriceImpactPct ?? config.jupiter?.maxPriceImpactPct ?? 5,
         maxRoundTripSellImpactPct: config.jupiter?.maxRoundTripSellImpactPct ?? null,
+        highRoundTripLossPct: config.jupiter?.highRoundTripLossPct ?? null,
+        highRoundTripMaxPositionSizeSol: config.jupiter?.highRoundTripMaxPositionSizeSol ?? null,
         requestMinIntervalMs: config.jupiter?.requestMinIntervalMs ?? 500,
         quoteRetryCount: config.jupiter?.quoteRetryCount ?? 2,
         quoteRetryDelayMs: config.jupiter?.quoteRetryDelayMs ?? 1500,
@@ -143,11 +145,16 @@ class JupiterService {
         const sellImpactPct = Number(sellQuote.priceImpactPct || 0);
         const tokenAmount = fromRawAmount(buyQuote.outAmount, tokenDecimals);
 
-        const details = { accepted: true, positionSizeSol, tokenAmount, tokenOutRaw: buyQuote.outAmount, roundTripOutSol, netRoundTripOutSol, estimatedFeesSol, roundTripLossPct, sellImpactPct, maxRoundTripLossPct: execConfig.maxRoundTripLossPct, maxRoundTripSellImpactPct: execConfig.maxRoundTripSellImpactPct, maxExitPriceImpactPct: execConfig.maxExitPriceImpactPct, minRoundTripOutSol: execConfig.minRoundTripOutSol, sellQuote };
+        const details = { accepted: true, positionSizeSol, tokenAmount, tokenOutRaw: buyQuote.outAmount, roundTripOutSol, netRoundTripOutSol, estimatedFeesSol, roundTripLossPct, sellImpactPct, maxRoundTripLossPct: execConfig.maxRoundTripLossPct, maxRoundTripSellImpactPct: execConfig.maxRoundTripSellImpactPct, highRoundTripLossPct: execConfig.highRoundTripLossPct, highRoundTripMaxPositionSizeSol: execConfig.highRoundTripMaxPositionSizeSol, maxExitPriceImpactPct: execConfig.maxExitPriceImpactPct, minRoundTripOutSol: execConfig.minRoundTripOutSol, sellQuote };
 
         if (execConfig.maxRoundTripSellImpactPct !== null && sellImpactPct > execConfig.maxRoundTripSellImpactPct) {
             details.accepted = false;
             throw new RoundTripLiquidityError(`Round-trip sell impact terlalu tinggi: ${sellImpactPct.toFixed(4)} > ${execConfig.maxRoundTripSellImpactPct}`, details);
+        }
+
+        if (execConfig.highRoundTripLossPct !== null && execConfig.highRoundTripMaxPositionSizeSol !== null && roundTripLossPct >= execConfig.highRoundTripLossPct && positionSizeSol > execConfig.highRoundTripMaxPositionSizeSol) {
+            details.accepted = false;
+            throw new RoundTripLiquidityError(`Round-trip loss tinggi ${roundTripLossPct.toFixed(2)}% butuh size <= ${execConfig.highRoundTripMaxPositionSizeSol} SOL`, details);
         }
 
         if (roundTripLossPct > execConfig.maxRoundTripLossPct) {
