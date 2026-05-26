@@ -97,11 +97,17 @@ function shouldCancelExit({ kind, triggerPnl, confirmPnl, threshold }) {
   if (kind === 'emergency' || kind === 'time_limit') return { cancel: false, reason: 'non_revalidated_exit' };
   if (kind === 'take_profit' && confirmPnl < threshold) return { cancel: true, reason: `TP tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% < target ${threshold}%` };
   if (kind === 'stop_loss' && confirmPnl > threshold) return { cancel: true, reason: `SL tidak valid lagi: confirm ${confirmPnl.toFixed(2)}% > SL ${threshold}%` };
-  if (kind === 'profit_lock' && (confirmPnl < 0 || (threshold > 0 && confirmPnl > threshold))) return { cancel: true, reason: `Profit lock tidak valid lagi: confirm ${confirmPnl.toFixed(2)}%, lock ${threshold}%` };
+
+  if (kind === 'profit_lock') {
+    if (confirmPnl < 0) return { cancel: true, reason: `Profit lock berubah negatif: confirm ${confirmPnl.toFixed(2)}%` };
+    if (threshold > 0 && confirmPnl >= threshold) return { cancel: false, reason: `profit_lock_confirmed_above_lock_${threshold}` };
+    return { cancel: true, reason: `Profit lock belum mencapai lock: confirm ${confirmPnl.toFixed(2)}%, lock ${threshold}%` };
+  }
+
   if (kind === 'trailing_stop' && confirmPnl < 0) return { cancel: true, reason: `Trailing profit berubah negatif: confirm ${confirmPnl.toFixed(2)}%` };
 
   const maxAllowedTriggerDriftPct = n(config.exitRisk?.maxExitTriggerDriftPct, 4);
-  if ((kind === 'take_profit' || kind === 'profit_lock' || kind === 'trailing_stop') && triggerPnl - confirmPnl > maxAllowedTriggerDriftPct) {
+  if ((kind === 'take_profit' || kind === 'trailing_stop') && triggerPnl - confirmPnl > maxAllowedTriggerDriftPct) {
     return { cancel: true, reason: `Quote drift terlalu besar: trigger ${triggerPnl.toFixed(2)}% -> confirm ${confirmPnl.toFixed(2)}%` };
   }
   return { cancel: false, reason: 'confirmed' };
