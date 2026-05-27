@@ -21,7 +21,7 @@
     "sameSizeRetryDelayMs": 2500,
     "sellSolOnly": true,
     "enableRoundTripValidation": true,
-    "maxRoundTripLossPct": 2.8,
+    "maxRoundTripLossPct": 3,
     "minRoundTripOutSol": 0,
     "minPositionSizeSol": 0.03,
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
@@ -31,18 +31,18 @@
     "timezoneOffsetHours": 7,
     "defaultMode": "skip",
     "normal": {
-      "hours": [9, 11, 12, 18],
+      "hours": [11],
       "positionSizeMultiplier": 1,
       "maxBuyQuoteWorseningPct": 1.5,
       "maxRoundTripLossWorseningPct": 0.75,
       "skipEntry": false
     },
     "defensive": {
-      "hours": [10, 14, 15, 16, 17, 19, 20],
-      "positionSizeMultiplier": 0.67,
+      "hours": [9, 10, 12, 14, 15, 16, 17, 18, 19, 20],
+      "positionSizeMultiplier": 0.5,
       "maxBuyQuoteWorseningPct": 1,
       "maxRoundTripLossWorseningPct": 0.5,
-      "skipEntry": true
+      "skipEntry": false
     },
     "skip": {
       "hours": [0, 1, 2, 3, 4, 5, 6, 7, 8, 13, 21, 22, 23],
