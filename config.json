@@ -27,26 +27,26 @@
     "positionSizeRetryMultipliers": [1, 0.75, 0.5, 0.25]
   },
   "timeRisk": {
-    "enabled": true,
+    "enabled": false,
     "timezoneOffsetHours": 7,
-    "defaultMode": "skip",
+    "defaultMode": "normal",
     "normal": {
-      "hours": [11],
+      "hours": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
       "positionSizeMultiplier": 1,
       "maxBuyQuoteWorseningPct": 1.5,
       "maxRoundTripLossWorseningPct": 0.75,
       "skipEntry": false
     },
     "defensive": {
-      "hours": [9, 10, 12, 14, 15, 16, 17, 18, 19, 20],
-      "positionSizeMultiplier": 0.5,
-      "maxBuyQuoteWorseningPct": 1,
-      "maxRoundTripLossWorseningPct": 0.5,
+      "hours": [],
+      "positionSizeMultiplier": 1,
+      "maxBuyQuoteWorseningPct": 1.5,
+      "maxRoundTripLossWorseningPct": 0.75,
       "skipEntry": false
     },
     "skip": {
-      "hours": [0, 1, 2, 3, 4, 5, 6, 7, 8, 13, 21, 22, 23],
-      "skipEntry": true
+      "hours": [],
+      "skipEntry": false
     }
   },
   "preEntryStability": {
