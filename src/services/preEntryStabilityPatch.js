@@ -18,16 +18,12 @@ function getLocalHour() {
 function getTimeRiskMode() {
   const t = config.timeRisk || {};
   if (t.enabled !== true) return { name: 'off', skipEntry: false, positionSizeMultiplier: 1 };
-
   const hour = getLocalHour();
   const modes = ['normal', 'defensive', 'skip'];
   for (const name of modes) {
     const mode = t[name] || {};
-    if (Array.isArray(mode.hours) && mode.hours.includes(hour)) {
-      return { name, hour, ...mode };
-    }
+    if (Array.isArray(mode.hours) && mode.hours.includes(hour)) return { name, hour, ...mode };
   }
-
   const defaultName = t.defaultMode || 'skip';
   return { name: defaultName, hour, ...(t[defaultName] || { skipEntry: true }) };
 }
@@ -42,6 +38,22 @@ function getPreEntryConfig(timeMode = null) {
     rejectIfSecondQuoteFails: p.rejectIfSecondQuoteFails !== false,
     rejectIfPositionSizeDrops: p.rejectIfPositionSizeDrops === true,
     positionSizeMultiplier: n(timeMode?.positionSizeMultiplier, 1)
+  };
+}
+
+function getJupiterObserverConfig() {
+  const j = config.jupiterObserver || {};
+  return {
+    enabled: j.enabled === true,
+    samples: Math.max(2, n(j.samples, 3)),
+    intervalMs: Math.max(500, n(j.intervalMs, 2000)),
+    maxExitSolDropPct: n(j.maxExitSolDropPct, 1.2),
+    maxRoundTripLossIncreasePct: n(j.maxRoundTripLossIncreasePct, 0.5),
+    maxSellImpactPct: n(j.maxSellImpactPct, 0.03),
+    rejectIfAllExitSolTicksDown: j.rejectIfAllExitSolTicksDown !== false,
+    flatDexTighten: j.flatDexTighten === true,
+    flatDexMaxExitSolDropPct: n(j.flatDexMaxExitSolDropPct, 0.8),
+    flatDexMaxSellImpactPct: n(j.flatDexMaxSellImpactPct, 0.028)
   };
 }
 
@@ -64,8 +76,125 @@ function positionSizeDropped(first, second) {
   return n(second?.executedPositionSizeSol, 0) < n(first?.executedPositionSizeSol, 0);
 }
 
+function isDexObserverFlat(token) {
+  const trend = Math.abs(n(token.observedTrendPercent, 0));
+  const volatility = Math.abs(n(token.volatility, 0));
+  const start = n(token.observedStartPrice, 0);
+  const end = n(token.observedEndPrice, 0);
+  const max = n(token.observedMaxPrice, 0);
+  const min = n(token.observedMinPrice, 0);
+  return trend === 0 && volatility === 0 && start === end && max === min;
+}
+
+function summarizeObserverSamples(samples) {
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  const exitSolStart = n(first?.roundTrip?.roundTripOutSol, 0);
+  const exitSolEnd = n(last?.roundTrip?.roundTripOutSol, 0);
+  const exitSolDropPct = exitSolStart > 0 ? ((exitSolStart - exitSolEnd) / exitSolStart) * 100 : 0;
+  const roundTripLossStart = n(first?.roundTrip?.roundTripLossPct, 0);
+  const roundTripLossEnd = n(last?.roundTrip?.roundTripLossPct, 0);
+  const roundTripLossIncreasePct = roundTripLossEnd - roundTripLossStart;
+  const sellImpacts = samples.map(s => n(s?.roundTrip?.sellImpactPct, 0));
+  const sellImpactMax = Math.max(...sellImpacts);
+  const exitSolValues = samples.map(s => n(s?.roundTrip?.roundTripOutSol, 0));
+  const allExitSolTicksDown = exitSolValues.length > 1 && exitSolValues.slice(1).every((value, i) => value < exitSolValues[i]);
+  return { exitSolStart, exitSolEnd, exitSolDropPct, roundTripLossStart, roundTripLossEnd, roundTripLossIncreasePct, sellImpactMax, exitSolValues, allExitSolTicksDown };
+}
+
+function compactSample(sample, index) {
+  return {
+    index,
+    positionSizeSol: sample.executedPositionSizeSol,
+    entryPriceUsd: sample.entryPriceUsd,
+    roundTripLossPct: sample.roundTrip?.roundTripLossPct,
+    roundTripOutSol: sample.roundTrip?.roundTripOutSol,
+    sellImpactPct: sample.roundTrip?.sellImpactPct,
+    priceImpactPct: sample.priceImpactPct
+  };
+}
+
+function evaluateJupiterObserver({ token, samples }) {
+  const cfg = getJupiterObserverConfig();
+  const summary = summarizeObserverSamples(samples);
+  const flatDex = isDexObserverFlat(token);
+  const maxExitSolDropPct = flatDex && cfg.flatDexTighten ? cfg.flatDexMaxExitSolDropPct : cfg.maxExitSolDropPct;
+  const maxSellImpactPct = flatDex && cfg.flatDexTighten ? cfg.flatDexMaxSellImpactPct : cfg.maxSellImpactPct;
+
+  const result = {
+    accepted: true,
+    flatDex,
+    samples: samples.map(compactSample),
+    ...summary,
+    limits: {
+      maxExitSolDropPct,
+      maxRoundTripLossIncreasePct: cfg.maxRoundTripLossIncreasePct,
+      maxSellImpactPct
+    }
+  };
+
+  if (summary.exitSolDropPct > maxExitSolDropPct) {
+    result.accepted = false;
+    result.reason = `Jupiter observer exitSol drop ${summary.exitSolDropPct.toFixed(2)}% > ${maxExitSolDropPct}%${flatDex ? ' (flat Dex)' : ''}`;
+  }
+
+  if (result.accepted && summary.roundTripLossIncreasePct > cfg.maxRoundTripLossIncreasePct) {
+    result.accepted = false;
+    result.reason = `Jupiter observer round-trip loss memburuk ${summary.roundTripLossIncreasePct.toFixed(2)}% > ${cfg.maxRoundTripLossIncreasePct}%`;
+  }
+
+  if (result.accepted && summary.sellImpactMax > maxSellImpactPct) {
+    result.accepted = false;
+    result.reason = `Jupiter observer sell impact ${summary.sellImpactMax.toFixed(4)} > ${maxSellImpactPct}${flatDex ? ' (flat Dex)' : ''}`;
+  }
+
+  if (result.accepted && cfg.rejectIfAllExitSolTicksDown && summary.allExitSolTicksDown) {
+    result.accepted = false;
+    result.reason = 'Jupiter observer semua tick exitSol turun';
+  }
+
+  return result;
+}
+
 function applyPreEntryStabilityPatch(engine) {
   if (!engine || engine.__preEntryStabilityPatchApplied) return engine;
+
+  engine.runJupiterObserver = async function runJupiterObserver(token, tokenDecimals, requestedSize) {
+    const cfg = getJupiterObserverConfig();
+    const symbol = token.baseToken.symbol;
+    const mint = token.baseToken.address;
+    if (!cfg.enabled) return { accepted: true, skipped: true };
+
+    const samples = [];
+    console.log(chalk.cyan(`[Jupiter Observer] ${symbol}: ${cfg.samples} sample setiap ${cfg.intervalMs / 1000}s...`));
+
+    for (let i = 0; i < cfg.samples; i++) {
+      try {
+        const sample = await jupiter.getBuyExecution(mint, requestedSize, tokenDecimals);
+        samples.push(sample);
+        console.log(chalk.gray(`   #${i + 1} out ${sample.roundTrip?.roundTripOutSol?.toFixed?.(6)} SOL | rtLoss ${n(sample.roundTrip?.roundTripLossPct, 0).toFixed(2)}% | sellImpact ${n(sample.roundTrip?.sellImpactPct, 0).toFixed(4)}`));
+      } catch (error) {
+        activityLogger.log('JUPITER_OBSERVER_SAMPLE_FAILED', { symbol, address: mint, requestedSize, sampleIndex: i + 1, error: error.message });
+        return { accepted: false, reason: `Jupiter observer sample ${i + 1} gagal: ${error.message}`, samples: samples.map(compactSample) };
+      }
+      if (i < cfg.samples - 1) await delay(cfg.intervalMs);
+    }
+
+    const result = evaluateJupiterObserver({ token, samples });
+    activityLogger.log(result.accepted ? 'JUPITER_OBSERVER_ACCEPTED' : 'JUPITER_OBSERVER_REJECTED', {
+      symbol,
+      address: mint,
+      requestedSize,
+      accepted: result.accepted,
+      reason: result.reason,
+      flatDex: result.flatDex,
+      exitSolDropPct: result.exitSolDropPct,
+      roundTripLossIncreasePct: result.roundTripLossIncreasePct,
+      sellImpactMax: result.sellImpactMax,
+      allExitSolTicksDown: result.allExitSolTicksDown
+    });
+    return result;
+  };
 
   engine.runPreEntryStabilityCheck = async function runPreEntryStabilityCheck(token, tokenDecimals) {
     const timeMode = getTimeRiskMode();
@@ -80,7 +209,6 @@ function applyPreEntryStabilityPatch(engine) {
     const symbol = token.baseToken.symbol;
     const mint = token.baseToken.address;
     const requestedSize = Number((config.trading.positionSize * cfg.positionSizeMultiplier).toFixed(9));
-
     console.log(chalk.cyan(`\n[PreEntry Stability] ${symbol} | timeMode=${timeMode.name} | size=${requestedSize} SOL | jam=${timeMode.hour}:00`));
 
     let first;
@@ -140,6 +268,15 @@ function applyPreEntryStabilityPatch(engine) {
       result.reason = `position size turun dari ${first.executedPositionSizeSol} ke ${second.executedPositionSizeSol} SOL`;
     }
 
+    if (result.accepted) {
+      const observer = await this.runJupiterObserver(token, tokenDecimals, requestedSize);
+      result.jupiterObserver = observer;
+      if (!observer.accepted) {
+        result.accepted = false;
+        result.reason = observer.reason;
+      }
+    }
+
     activityLogger.log(result.accepted ? 'PRE_ENTRY_STABILITY_ACCEPTED' : 'PRE_ENTRY_STABILITY_REJECTED', {
       symbol,
       address: mint,
@@ -150,6 +287,14 @@ function applyPreEntryStabilityPatch(engine) {
       roundTripWorseningPct: rtWorsening,
       firstPositionSizeSol: first.executedPositionSizeSol,
       secondPositionSizeSol: second.executedPositionSizeSol,
+      jupiterObserver: result.jupiterObserver ? {
+        accepted: result.jupiterObserver.accepted,
+        reason: result.jupiterObserver.reason,
+        exitSolDropPct: result.jupiterObserver.exitSolDropPct,
+        roundTripLossIncreasePct: result.jupiterObserver.roundTripLossIncreasePct,
+        sellImpactMax: result.jupiterObserver.sellImpactMax,
+        flatDex: result.jupiterObserver.flatDex
+      } : null,
       reason: result.reason
     });
 
@@ -172,6 +317,20 @@ function applyPreEntryStabilityPatch(engine) {
     token.timeRiskMode = check.timeMode?.name;
     token.timeRiskHour = check.timeMode?.hour;
     token.timeRiskRequestedSizeSol = check.requestedSizeSol;
+    token.jupiterObserver = check.jupiterObserver ? {
+      accepted: check.jupiterObserver.accepted,
+      flatDex: check.jupiterObserver.flatDex,
+      exitSolStart: check.jupiterObserver.exitSolStart,
+      exitSolEnd: check.jupiterObserver.exitSolEnd,
+      exitSolDropPct: check.jupiterObserver.exitSolDropPct,
+      roundTripLossStart: check.jupiterObserver.roundTripLossStart,
+      roundTripLossEnd: check.jupiterObserver.roundTripLossEnd,
+      roundTripLossIncreasePct: check.jupiterObserver.roundTripLossIncreasePct,
+      sellImpactMax: check.jupiterObserver.sellImpactMax,
+      allExitSolTicksDown: check.jupiterObserver.allExitSolTicksDown,
+      limits: check.jupiterObserver.limits,
+      samples: check.jupiterObserver.samples
+    } : null;
     token.preEntryStability = {
       buyWorseningPct: check.buyWorseningPct,
       roundTripWorseningPct: check.roundTripWorseningPct,
@@ -182,12 +341,10 @@ function applyPreEntryStabilityPatch(engine) {
     };
 
     const originalPositionSize = config.trading.positionSize;
-    if (check.requestedSizeSol && check.requestedSizeSol !== originalPositionSize) {
-      config.trading.positionSize = check.requestedSizeSol;
-    }
+    if (check.requestedSizeSol && check.requestedSizeSol !== originalPositionSize) config.trading.positionSize = check.requestedSizeSol;
 
     try {
-      console.log(chalk.green(`[PreEntry Stability] Quote stabil. Lanjut entry final. Mode=${check.timeMode?.name || 'off'}`));
+      console.log(chalk.green(`[PreEntry Stability] Quote stabil + Jupiter observer lolos. Lanjut entry final.`));
       return await originalOpenPosition(token);
     } finally {
       config.trading.positionSize = originalPositionSize;
