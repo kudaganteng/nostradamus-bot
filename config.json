@@ -57,6 +57,18 @@
     "rejectIfSecondQuoteFails": true,
     "rejectIfPositionSizeDrops": true
   },
+  "jupiterObserver": {
+    "enabled": true,
+    "samples": 3,
+    "intervalMs": 2000,
+    "maxExitSolDropPct": 1.2,
+    "maxRoundTripLossIncreasePct": 0.5,
+    "maxSellImpactPct": 0.03,
+    "rejectIfAllExitSolTicksDown": true,
+    "flatDexTighten": true,
+    "flatDexMaxExitSolDropPct": 0.8,
+    "flatDexMaxSellImpactPct": 0.028
+  },
   "stagnationExit": {
     "enabled": true,
     "rules": [
