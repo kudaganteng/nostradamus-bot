@@ -11,9 +11,10 @@
     "maxPriceImpactPct": 5,
     "maxEntryPriceImpactPct": 3,
     "maxExitPriceImpactPct": 3,
-    "maxRoundTripSellImpactPct": 0.05,
+    "maxRoundTripSellImpactPct": 0.03,
     "highRoundTripLossPct": 2.5,
     "highRoundTripMaxPositionSizeSol": 0.075,
+    "highRoundTripMaxSellImpactPct": 0.028,
     "requestMinIntervalMs": 500,
     "quoteRetryCount": 2,
     "quoteRetryDelayMs": 1500,
@@ -72,6 +73,8 @@
   "stagnationExit": {
     "enabled": true,
     "rules": [
+      { "afterMinutes": 1, "maxPnlBelow": 0, "currentPnlBelow": -3, "reason": "1m no momentum and PNL <= -3%" },
+      { "afterMinutes": 2, "maxPnlBelow": 0.5, "currentPnlBelow": 0, "reason": "2m maxPnl < 0.5% and PNL negative" },
       { "afterMinutes": 5, "maxPnlBelow": 1, "reason": "5m maxPnl < 1%" },
       { "afterMinutes": 7, "maxPnlBelow": 2, "reason": "7m maxPnl < 2%" }
     ],
